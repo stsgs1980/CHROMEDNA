@@ -12,6 +12,8 @@ import { useUIStore } from '@/stores/uiStore';
 import { Timeframe, ENERGY_SYMBOLS } from '@/types/energy';
 import { DECOMPOSITION_LEVELS } from '@/types/energy';
 import { generateEnergyData } from '@/lib/energyGenerators';
+import { PriceAlerts } from '@/components/panels/PriceAlerts';
+import { TradeSimulation } from '@/components/panels/TradeSimulation';
 
 const TIMEFRAMES: { value: Timeframe; label: string }[] = [
   { value: '1m', label: '1m' },
@@ -308,6 +310,11 @@ export function LeftPanel() {
 
           <div className="section-divider-enhanced" />
 
+          {/* Price Alerts */}
+          <PriceAlerts />
+
+          <div className="section-divider-enhanced" />
+
           {/* Scene Info */}
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -319,6 +326,11 @@ export function LeftPanel() {
               <span className="text-[9px] text-gray-600">Layers: <span className="text-amber-400/70 tabular-nums">{activeLayerCount}</span> active</span>
             </div>
           </div>
+
+          <div className="section-divider-enhanced" />
+
+          {/* Trade Simulation */}
+          <TradeSimulation />
 
           {/* Bottom padding */}
           <div className="h-6" />

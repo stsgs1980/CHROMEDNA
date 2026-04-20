@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { EnergySymbol, Timeframe, DecompositionLevel } from '@/types/energy';
 import { EnergyCandle, VolumeProfile, OrderFlowData, AICompositeScore } from '@/types/market';
 
+export interface PriceAlert {
+  id: string;
+  symbol: EnergySymbol;
+  price: number;
+  direction: 'above' | 'below';
+  createdAt: number;
+  triggered: boolean;
+}
+
 interface MarketState {
   // Data
   symbol: EnergySymbol;
@@ -15,6 +24,9 @@ interface MarketState {
   aiScore: AICompositeScore | null;
   isLoading: boolean;
 
+  // Price Alerts
+  priceAlerts: PriceAlert[];
+
   // Actions
   setSymbol: (symbol: EnergySymbol) => void;
   setTimeframe: (timeframe: Timeframe) => void;
@@ -26,6 +38,12 @@ interface MarketState {
   setOrderFlow: (of: OrderFlowData | null) => void;
   setAiScore: (score: AICompositeScore | null) => void;
   setLoading: (loading: boolean) => void;
+
+  // Price Alert Actions
+  addPriceAlert: (alert: Omit<PriceAlert, 'id' | 'createdAt' | 'triggered'>) => void;
+  removePriceAlert: (id: string) => void;
+  triggerPriceAlert: (id: string) => void;
+  clearTriggeredAlerts: () => void;
 }
 
 export const useMarketStore = create<MarketState>((set) => ({
@@ -40,6 +58,8 @@ export const useMarketStore = create<MarketState>((set) => ({
   aiScore: null,
   isLoading: true,
 
+  priceAlerts: [],
+
   setSymbol: (symbol) => set({ symbol, selectedCandleIndex: null }),
   setTimeframe: (timeframe) => set({ timeframe }),
   setDecompositionLevel: (decompositionLevel) => set({ decompositionLevel }),
@@ -50,4 +70,25 @@ export const useMarketStore = create<MarketState>((set) => ({
   setOrderFlow: (orderFlow) => set({ orderFlow }),
   setAiScore: (aiScore) => set({ aiScore }),
   setLoading: (isLoading) => set({ isLoading }),
+
+  addPriceAlert: (alert) => set((state) => ({
+    priceAlerts: [
+      ...state.priceAlerts,
+      {
+        ...alert,
+        id: `alert-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        createdAt: Date.now(),
+        triggered: false,
+      },
+    ],
+  })),
+  removePriceAlert: (id) => set((state) => ({
+    priceAlerts: state.priceAlerts.filter((a) => a.id !== id),
+  })),
+  triggerPriceAlert: (id) => set((state) => ({
+    priceAlerts: state.priceAlerts.map((a) => a.id === id ? { ...a, triggered: true } : a),
+  })),
+  clearTriggeredAlerts: () => set((state) => ({
+    priceAlerts: state.priceAlerts.filter((a) => !a.triggered),
+  })),
 }));

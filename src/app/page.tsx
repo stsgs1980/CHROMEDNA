@@ -108,26 +108,86 @@ function KeyboardShortcuts() {
   return null;
 }
 
+// Loading progress text cycler
+function LoadingProgressText() {
+  const messages = [
+    'Initializing 3D Engine...',
+    'Loading Market Data...',
+    'Calibrating Helix Parameters...',
+    'Rendering DNA Structure...',
+  ];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % messages.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [messages.length]);
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-3 h-4">
+      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+      <span key={index} className="text-[10px] text-gray-600 loading-text-cycle">{messages[index]}</span>
+    </div>
+  );
+}
+
 function Footer() {
   const [time, setTime] = useState('');
+  const [latency, setLatency] = useState(23);
+  const [marketSession, setMarketSession] = useState<'PRE-MARKET' | 'REGULAR' | 'AFTER-HOURS'>('REGULAR');
   const isLive = useMarketStore((s) => s.isLive);
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
       setTime(now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+
+      // Determine market session based on current hour (US Eastern equivalent)
+      const hour = now.getHours();
+      if (hour >= 4 && hour < 9) {
+        setMarketSession('PRE-MARKET');
+      } else if (hour >= 9 && hour < 16) {
+        setMarketSession('REGULAR');
+      } else {
+        setMarketSession('AFTER-HOURS');
+      }
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
 
+  // Mock latency fluctuation
+  useEffect(() => {
+    const updateLatency = () => {
+      setLatency(Math.floor(12 + Math.random() * 33)); // 12-45ms
+    };
+    updateLatency();
+    const interval = setInterval(updateLatency, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const sessionClass = marketSession === 'PRE-MARKET'
+    ? 'market-session-pre'
+    : marketSession === 'REGULAR'
+    ? 'market-session-regular'
+    : 'market-session-after';
+
+  const sessionDotClass = marketSession === 'PRE-MARKET'
+    ? 'bg-amber-400'
+    : marketSession === 'REGULAR'
+    ? 'bg-green-400'
+    : 'bg-red-400';
+
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
       {/* Gradient top border line */}
       <div className="h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
-      <div className="bg-gray-950/80 backdrop-blur-md flex items-center justify-between px-4" style={{ height: '24px' }}>
-        {/* Left: Version */}
+      {/* Radar sweep background layer */}
+      <div className="bg-gray-950/80 backdrop-blur-md flex items-center justify-between px-4 animate-radar-sweep" style={{ height: '28px' }}>
+        {/* Left: Version + Market Session */}
         <div className="flex items-center gap-2">
           <span className="text-[9px] font-bold tracking-wider" style={{
             background: 'linear-gradient(135deg, #f59e0b, #fbbf24, #f59e0b)',
@@ -137,26 +197,38 @@ function Footer() {
           }}>
             CHROME DNA v0.5
           </span>
+          <div className="footer-separator-dot" />
+          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider border ${sessionClass}`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${sessionDotClass} radar-glow-dot`} />
+            {marketSession}
+          </div>
         </div>
 
         {/* Center: System status indicators */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             <div className="status-dot status-dot-green" />
             <span className="text-[9px] text-gray-500">3D Engine</span>
           </div>
+          <div className="footer-separator-dot" />
           <div className="flex items-center gap-1.5">
             <div className={`status-dot status-dot-amber ${isLive ? 'animate-pulse' : ''}`} />
             <span className="text-[9px] text-gray-500">Data Feed</span>
           </div>
+          <div className="footer-separator-dot" />
           <div className="flex items-center gap-1.5">
             <div className="status-dot status-dot-green" />
             <span className="text-[9px] text-gray-500">AI Engine</span>
           </div>
         </div>
 
-        {/* Right: Mock Data label + time */}
-        <div className="flex items-center gap-3">
+        {/* Right: Latency + Mock Data + time */}
+        <div className="flex items-center gap-2.5">
+          <div className="latency-indicator flex items-center gap-1">
+            <span className="text-[8px] text-gray-600 tracking-wide">LATENCY</span>
+            <span className="text-[9px] text-amber-400/80 tabular-nums font-mono font-medium">{latency}ms</span>
+          </div>
+          <div className="footer-separator-dot" />
           <span className="helix-status-badge">Mock Data</span>
           <span className="text-[9px] text-gray-500 tabular-nums font-mono">{time}</span>
         </div>
@@ -291,23 +363,58 @@ export default function Home() {
             className="absolute inset-0 bg-[#030308] flex items-center justify-center z-[100]"
           >
             <div className="flex flex-col items-center gap-6">
+              {/* DNA Helix SVG Animation */}
+              <div className="relative w-32 h-32 animate-dna-rotate">
+                <svg viewBox="0 0 200 200" className="w-full h-full">
+                  {/* Double helix strands */}
+                  <path d="M100,10 C130,30 170,50 170,80 C170,110 130,130 100,150 C70,170 30,190 30,200" fill="none" stroke="rgba(245,158,11,0.6)" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d="M100,10 C70,30 30,50 30,80 C30,110 70,130 100,150 C130,170 170,190 170,200" fill="none" stroke="rgba(74,222,128,0.5)" strokeWidth="2.5" strokeLinecap="round" />
+                  {/* Cross rungs */}
+                  <line x1="65" y1="35" x2="135" y2="35" stroke="rgba(245,158,11,0.15)" strokeWidth="1" />
+                  <line x1="42" y1="65" x2="158" y2="65" stroke="rgba(245,158,11,0.2)" strokeWidth="1" />
+                  <line x1="35" y1="95" x2="165" y2="95" stroke="rgba(245,158,11,0.25)" strokeWidth="1.5" />
+                  <line x1="42" y1="125" x2="158" y2="125" stroke="rgba(245,158,11,0.2)" strokeWidth="1" />
+                  <line x1="65" y1="155" x2="135" y2="155" stroke="rgba(245,158,11,0.15)" strokeWidth="1" />
+                  {/* Glowing nodes at intersections */}
+                  <circle cx="65" cy="35" r="3" fill="rgba(245,158,11,0.7)" />
+                  <circle cx="135" cy="35" r="3" fill="rgba(74,222,128,0.6)" />
+                  <circle cx="42" cy="65" r="3" fill="rgba(74,222,128,0.6)" />
+                  <circle cx="158" cy="65" r="3" fill="rgba(245,158,11,0.7)" />
+                  <circle cx="35" cy="95" r="3.5" fill="rgba(245,158,11,0.8)" />
+                  <circle cx="165" cy="95" r="3.5" fill="rgba(74,222,128,0.7)" />
+                  <circle cx="42" cy="125" r="3" fill="rgba(74,222,128,0.6)" />
+                  <circle cx="158" cy="125" r="3" fill="rgba(245,158,11,0.7)" />
+                  <circle cx="65" cy="155" r="3" fill="rgba(245,158,11,0.7)" />
+                  <circle cx="135" cy="155" r="3" fill="rgba(74,222,128,0.6)" />
+                  {/* Center glow */}
+                  <circle cx="100" cy="95" r="8" fill="none" stroke="rgba(245,158,11,0.15)" strokeWidth="1">
+                    <animate attributeName="r" values="8;12;8" dur="2s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.15;0.3;0.15" dur="2s" repeatCount="indefinite" />
+                  </circle>
+                </svg>
+              </div>
+
+              {/* Larger spinner behind the title */}
               <div className="relative">
-                <div className="w-20 h-20 rounded-full border-2 border-amber-400/20 border-t-amber-400 animate-spin" />
+                <div className="w-24 h-24 rounded-full border-2 border-amber-400/15 border-t-amber-400/60 animate-spin" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600 animate-subtle-float" />
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600 animate-subtle-float shadow-lg shadow-amber-500/20" />
                 </div>
               </div>
+
               <div className="text-center">
                 <div className="text-white text-xl font-bold tracking-tight">
-                  CHROME<span className="text-amber-400">DNA</span>
+                  CHROME<span className="text-gradient-amber">DNA</span>
                 </div>
                 <div className="text-gray-500 text-sm mt-1">
-                  Loading Energy Futures...
+                  Energy Futures Terminal
                 </div>
-                <div className="flex items-center justify-center gap-2 mt-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                  <span className="text-[10px] text-gray-600">Initializing 3D Helix Engine</span>
-                </div>
+                <LoadingProgressText />
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-64 h-[2px] bg-white/[0.04] rounded-full overflow-hidden">
+                <div className="loading-progress-bar" />
               </div>
             </div>
           </motion.div>

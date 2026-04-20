@@ -967,3 +967,241 @@ body {
 .data-refresh-flash {
   animation: refresh-flash 0.3s ease-out;
 }
+
+/* ─── CHROME DNA Task 5-b: Header/Footer Enhancement CSS ─── */
+
+/* Radar sweep animation - conic gradient rotation */
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-radar-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-radar-sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 270deg,
+    rgba(245, 158, 11, 0.06) 310deg,
+    rgba(245, 158, 11, 0.12) 340deg,
+    rgba(245, 158, 11, 0.06) 360deg
+  );
+  animation: radar-sweep 4s linear infinite;
+  pointer-events: none;
+}
+
+/* DNA helix loader - subtle double-helix pattern */
+@keyframes helix-spin {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+.dna-helix-loader {
+  position: relative;
+  perspective: 200px;
+}
+
+.dna-helix-loader::before,
+.dna-helix-loader::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  animation: helix-spin 3s linear infinite;
+}
+
+.dna-helix-loader::before {
+  background: linear-gradient(
+    180deg,
+    rgba(245, 158, 11, 0.15) 0%,
+    transparent 15%,
+    rgba(245, 158, 11, 0.1) 30%,
+    transparent 45%,
+    rgba(245, 158, 11, 0.15) 60%,
+    transparent 75%,
+    rgba(245, 158, 11, 0.1) 90%,
+    transparent 100%
+  );
+}
+
+.dna-helix-loader::after {
+  animation-delay: -1.5s;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(74, 222, 128, 0.1) 15%,
+    transparent 30%,
+    rgba(74, 222, 128, 0.08) 45%,
+    transparent 60%,
+    rgba(74, 222, 128, 0.1) 75%,
+    transparent 90%,
+    rgba(74, 222, 128, 0.08) 100%
+  );
+}
+
+/* BID/ASK flash animation */
+@keyframes bid-ask-flash {
+  0% { opacity: 1; filter: brightness(1.4); }
+  50% { opacity: 0.8; }
+  100% { opacity: 1; filter: brightness(1); }
+}
+
+.bid-ask-flash {
+  animation: bid-ask-flash 0.4s ease-out;
+}
+
+/* Market session indicator colors */
+.market-session-pre {
+  color: rgba(251, 191, 36, 0.8);
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.market-session-regular {
+  color: rgba(74, 222, 128, 0.9);
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.market-session-after {
+  color: rgba(248, 113, 113, 0.8);
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+/* Loading progress bar */
+@keyframes loading-fill {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.loading-progress-bar {
+  height: 2px;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.8), rgba(251, 191, 36, 0.9));
+  animation: loading-fill 3s ease-in-out forwards;
+  border-radius: 1px;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+}
+
+/* Loading text fade cycle */
+@keyframes text-cycle-fade {
+  0%, 15% { opacity: 0; transform: translateY(4px); }
+  20%, 80% { opacity: 1; transform: translateY(0); }
+  85%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+.loading-text-cycle {
+  animation: text-cycle-fade 2s ease-in-out infinite;
+}
+
+/* DNA helix SVG rotation */
+@keyframes dna-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-dna-rotate {
+  animation: dna-rotate 8s linear infinite;
+}
+
+/* Footer radar glow dot */
+@keyframes radar-glow {
+  0%, 100% { box-shadow: 0 0 3px 1px rgba(245, 158, 11, 0.3); }
+  50% { box-shadow: 0 0 6px 2px rgba(245, 158, 11, 0.5); }
+}
+
+.radar-glow-dot {
+  animation: radar-glow 2s ease-in-out infinite;
+}
+
+/* Footer separator dot */
+.footer-separator-dot {
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+/* Latency indicator pulse */
+@keyframes latency-flicker {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.latency-indicator {
+  animation: latency-flicker 1.5s ease-in-out infinite;
+}
+
+/* ─── CHROME DNA Task 6-b: Trade Simulation Panel CSS ─── */
+
+/* BUY button - green gradient with hover glow */
+.trade-btn-buy {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.12));
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+  box-shadow: inset 0 1px 0 rgba(74, 222, 128, 0.1);
+}
+
+.trade-btn-buy:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.35), rgba(34, 197, 94, 0.18));
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow:
+    0 0 12px rgba(34, 197, 94, 0.15),
+    inset 0 1px 0 rgba(74, 222, 128, 0.15);
+  transform: translateY(-1px);
+}
+
+.trade-btn-buy:active:not(:disabled) {
+  transform: translateY(0);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.4), rgba(34, 197, 94, 0.2));
+}
+
+/* SELL button - red gradient with hover glow */
+.trade-btn-sell {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.12));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  box-shadow: inset 0 1px 0 rgba(248, 113, 113, 0.1);
+}
+
+.trade-btn-sell:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.35), rgba(239, 68, 68, 0.18));
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow:
+    0 0 12px rgba(239, 68, 68, 0.15),
+    inset 0 1px 0 rgba(248, 113, 113, 0.15);
+  transform: translateY(-1px);
+}
+
+.trade-btn-sell:active:not(:disabled) {
+  transform: translateY(0);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(239, 68, 68, 0.2));
+}
+
+/* Trade flash animation - when trade is executed */
+@keyframes trade-flash-green {
+  0% { background-color: rgba(34, 197, 94, 0.2); }
+  100% { background-color: transparent; }
+}
+
+@keyframes trade-flash-red {
+  0% { background-color: rgba(239, 68, 68, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.trade-flash-green {
+  animation: trade-flash-green 0.6s ease-out;
+}
+
+.trade-flash-red {
+  animation: trade-flash-red 0.6s ease-out;
+}

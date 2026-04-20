@@ -7,6 +7,9 @@ import { EffectComposer, Bloom, ChromaticAberration, Vignette } from '@react-thr
 import { BlendFunction } from 'postprocessing';
 import { EnergyHelix } from './EnergyHelix';
 import { CameraRig } from './CameraRig';
+import { useMarketStore } from '@/stores/marketStore';
+import { ENERGY_SYMBOLS } from '@/types/energy';
+import { generateHelixData } from '@/lib/helixMath';
 import * as THREE from 'three';
 
 function PostProcessing() {
@@ -70,6 +73,186 @@ function FloatingParticles() {
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
       <sphereGeometry args={[1, 6, 6]} />
       <meshBasicMaterial color="#FFD700" transparent opacity={0.3} />
+    </instancedMesh>
+  );
+}
+
+// Holographic animated grid floor at Y = -1
+function HolographicGridFloor() {
+  const gridHelperRef = useRef<THREE.GridHelper>(null);
+  const gridMaterialRef = useRef<THREE.ShaderMaterial>(null);
+
+  // Custom shader for the radial glow
+  const glowShader = useMemo(() => ({
+    uniforms: {
+      uTime: { value: 0 },
+      uColor: { value: new THREE.Color('#FFD700') },
+      uMinOpacity: { value: 0.05 },
+      uMaxOpacity: { value: 0.12 },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform vec3 uColor;
+      uniform float uMinOpacity;
+      uniform float uMaxOpacity;
+      varying vec2 vUv;
+      void main() {
+        // Radial fade from center
+        vec2 center = vUv - 0.5;
+        float dist = length(center);
+        float radialFade = 1.0 - smoothstep(0.0, 0.5, dist);
+        
+        // Pulse animation
+        float pulse = mix(uMinOpacity, uMaxOpacity, (sin(uTime * 0.8) * 0.5 + 0.5));
+        
+        float alpha = radialFade * pulse;
+        gl_FragColor = vec4(uColor, alpha);
+      }
+    `,
+  }), []);
+
+  // Set gridHelper material to transparent on mount
+  const gridHelperCallback = useMemo(() => (el: THREE.GridHelper | null) => {
+    if (el) {
+      (gridHelperRef as React.MutableRefObject<THREE.GridHelper | null>).current = el;
+      const mats = Array.isArray(el.material) ? el.material : [el.material];
+      mats.forEach((mat) => {
+        mat.transparent = true;
+        mat.opacity = 0.08;
+        (mat as THREE.LineBasicMaterial).color.set('#FFD700');
+        mat.depthWrite = false;
+      });
+    }
+  }, []);
+
+  useFrame((state) => {
+    if (gridMaterialRef.current) {
+      gridMaterialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+    }
+    // Pulse the grid helper opacity
+    if (gridHelperRef.current) {
+      const pulse = 0.05 + (Math.sin(state.clock.elapsedTime * 0.8) * 0.5 + 0.5) * 0.07;
+      const mats = Array.isArray(gridHelperRef.current.material)
+        ? gridHelperRef.current.material
+        : [gridHelperRef.current.material];
+      mats.forEach((mat) => {
+        mat.opacity = pulse;
+      });
+    }
+  });
+
+  return (
+    <group position={[0, -1, 0]}>
+      {/* Grid lines */}
+      <gridHelper ref={gridHelperCallback} args={[30, 60, '#FFD700', '#FFD700']} />
+      {/* Radial glow plane with animated shader */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
+        <planeGeometry args={[14, 14]} />
+        <shaderMaterial
+          ref={gridMaterialRef}
+          transparent
+          depthWrite={false}
+          uniforms={glowShader.uniforms}
+          vertexShader={glowShader.vertexShader}
+          fragmentShader={glowShader.fragmentShader}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+// Particle trail effect that follows the last helix nodes
+function HelixParticleTrail() {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummyRef = useRef(new THREE.Object3D());
+  const TRAIL_COUNT = 40; // particles for the trail
+
+  const candles = useMarketStore((s) => s.candles);
+  const symbol = useMarketStore((s) => s.symbol);
+  const info = ENERGY_SYMBOLS[symbol];
+
+  // Compute trail positions from last 5 nodes
+  const trailData = useMemo(() => {
+    const helixData = generateHelixData(candles, symbol);
+    const buyers = helixData.buyers;
+    if (buyers.length === 0) return [];
+
+    const lastN = 5;
+    const startIdx = Math.max(0, buyers.length - lastN);
+    const trailPoints: { x: number; y: number; z: number; age: number }[] = [];
+
+    for (let n = startIdx; n < buyers.length; n++) {
+      const point = buyers[n];
+      const particlesPerNode = Math.floor(TRAIL_COUNT / lastN);
+      for (let p = 0; p < particlesPerNode; p++) {
+        const spread = 0.15;
+        trailPoints.push({
+          x: point.position[0] + (Math.random() - 0.5) * spread,
+          y: point.position[1] + (Math.random() - 0.5) * spread * 0.5,
+          z: point.position[2] + (Math.random() - 0.5) * spread,
+          age: (buyers.length - n) / lastN, // 0 = newest, 1 = oldest
+        });
+      }
+    }
+
+    // Pad to TRAIL_COUNT if needed
+    while (trailPoints.length < TRAIL_COUNT) {
+      const lastPoint = buyers[buyers.length - 1];
+      trailPoints.push({
+        x: lastPoint.position[0] + (Math.random() - 0.5) * 0.2,
+        y: lastPoint.position[1] + (Math.random() - 0.5) * 0.1,
+        z: lastPoint.position[2] + (Math.random() - 0.5) * 0.2,
+        age: Math.random(),
+      });
+    }
+
+    return trailPoints.slice(0, TRAIL_COUNT);
+  }, [candles, symbol]);
+
+  // Animate: drift upward and outward, fade
+  useFrame((state) => {
+    if (!meshRef.current || trailData.length === 0) return;
+    const time = state.clock.elapsedTime;
+    const dummy = dummyRef.current;
+
+    trailData.forEach((p, i) => {
+      const drift = Math.sin(time * 0.5 + i * 0.3) * 0.05;
+      const driftUp = Math.cos(time * 0.3 + i * 0.2) * 0.03 + 0.02;
+      dummy.position.set(
+        p.x + drift * (1 + p.age),
+        p.y + driftUp * (time % 3) * 0.1,
+        p.z + drift * 0.7 * (1 + p.age)
+      );
+      // Scale decreases with age, pulsing
+      const baseScale = 0.03 * (1 - p.age * 0.6);
+      const pulse = Math.sin(time * 2 + i * 0.5) * 0.005;
+      dummy.scale.setScalar(Math.max(0.005, baseScale + pulse));
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  if (trailData.length === 0) return null;
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, TRAIL_COUNT]}>
+      <sphereGeometry args={[1, 6, 6]} />
+      <meshStandardMaterial
+        color={info.buyerColor}
+        emissive={info.buyerColor}
+        emissiveIntensity={0.8}
+        transparent
+        opacity={0.5}
+      />
     </instancedMesh>
   );
 }
@@ -152,10 +335,12 @@ export function Scene() {
 
       <Suspense fallback={<LoadingFallback />}>
         <SceneLights />
+        <HolographicGridFloor />
         <EnergyHelix />
         <CameraRig />
         <AxisLabels />
         <FloatingParticles />
+        <HelixParticleTrail />
 
         <Environment preset="night" />
         <ContactShadows

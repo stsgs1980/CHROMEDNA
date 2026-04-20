@@ -152,6 +152,16 @@ export function Header() {
 
   const decDigits = symbol === 'CL' ? 2 : 4;
 
+  // BID/ASK derivation from candle data
+  const bidAskData = useMemo(() => {
+    if (!latestCandle) return { bid: 0, ask: 0, spread: 0 };
+    const tickSize = symbol === 'CL' ? 0.01 : symbol === 'NG' ? 0.001 : 0.0001;
+    const offset = tickSize * (symbol === 'CL' ? 3 : 5); // small offset based on tick size
+    const bid = latestCandle.close - offset;
+    const ask = latestCandle.close + offset;
+    return { bid, ask, spread: ask - bid };
+  }, [latestCandle, symbol]);
+
   // Session high/low from visible candles
   const sessionHigh = useMemo(() => {
     const last20 = candles.slice(-20);
@@ -227,6 +237,34 @@ export function Header() {
               </div>
             </div>
           </div>
+
+          {/* BID/ASK Spread Display */}
+          {price > 0 && (
+            <div className="hidden lg:flex items-center gap-1.5 border-l border-white/[0.06] pl-3 relative">
+              <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-amber-500/20 to-transparent" />
+              {/* BID */}
+              <div key={`bid-${bidAskData.bid}`} className="flex flex-col items-end bid-ask-flash">
+                <span className="text-[8px] text-gray-600 font-medium tracking-wide">BID</span>
+                <span className="text-[11px] font-semibold tabular-nums text-green-400 number-transition">
+                  {bidAskData.bid.toFixed(decDigits)}
+                </span>
+              </div>
+              {/* Spread */}
+              <div className="flex flex-col items-center px-1.5 py-0.5 rounded bg-white/[0.02] border border-white/[0.03]">
+                <span className="text-[7px] text-gray-600 tracking-wider">SPREAD</span>
+                <span className="text-[10px] font-bold tabular-nums text-amber-400/80">
+                  {bidAskData.spread.toFixed(decDigits)}
+                </span>
+              </div>
+              {/* ASK */}
+              <div key={`ask-${bidAskData.ask}`} className="flex flex-col items-start bid-ask-flash">
+                <span className="text-[8px] text-gray-600 font-medium tracking-wide">ASK</span>
+                <span className="text-[11px] font-semibold tabular-nums text-red-400 number-transition">
+                  {bidAskData.ask.toFixed(decDigits)}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Session Range */}
           <div className="hidden xl:flex flex-col items-end text-[9px] text-gray-500 tabular-nums border-l border-white/[0.06] pl-3 relative">

@@ -197,11 +197,13 @@ function ConnectionBars() {
   );
 }
 
-// Price level indicators (now horizontal lines at different Z positions)
+// Price level indicators with glow planes at key levels
 function PriceLevelIndicators() {
   const candles = useMarketStore((s) => s.candles);
   const symbol = useMarketStore((s) => s.symbol);
+  const materialRef = useRef<THREE.MeshBasicMaterial>(null);
 
+  // Standard grid levels
   const levels = useMemo(() => {
     if (candles.length === 0) return [];
     const closes = candles.map((c) => c.close);
@@ -221,11 +223,44 @@ function PriceLevelIndicators() {
     return result;
   }, [candles, symbol]);
 
+  // Key price level glow planes (high, low, current)
+  const keyLevels = useMemo(() => {
+    if (candles.length === 0) return [];
+    const closes = candles.map((c) => c.close);
+    const highs = candles.map((c) => c.high);
+    const lows = candles.map((c) => c.low);
+    const minPrice = Math.min(...closes);
+    const maxPrice = Math.max(...closes);
+    const priceRange = maxPrice - minPrice || 1;
+    const targetZRange = 3;
+    const zForPrice = (price: number) => ((price - minPrice) / priceRange) * targetZRange - targetZRange / 2;
+
+    const currentPrice = closes[closes.length - 1];
+    const highPrice = Math.max(...highs);
+    const lowPrice = Math.min(...lows);
+
+    return [
+      { z: zForPrice(currentPrice), type: 'current' as const, color: '#FFD700', opacity: 0.12, emissiveIntensity: 0.5 },
+      { z: zForPrice(highPrice), type: 'high' as const, color: '#32CD32', opacity: 0.06, emissiveIntensity: 0.2 },
+      { z: zForPrice(lowPrice), type: 'low' as const, color: '#FF4500', opacity: 0.06, emissiveIntensity: 0.2 },
+    ];
+  }, [candles, symbol]);
+
+  // Pulse animation for current price plane
+  useFrame((state) => {
+    if (materialRef.current) {
+      const pulse = 0.08 + Math.sin(state.clock.elapsedTime * 1.5) * 0.06;
+      materialRef.current.opacity = pulse;
+    }
+  });
+
   if (levels.length === 0) return null;
   const yEnd = candles.length * HEIGHT_PER_CANDLE;
+  const planeWidth = HELIX_RADIUS * 2 + 1; // span helix diameter + margin
 
   return (
     <group>
+      {/* Standard grid level lines */}
       {levels.map((level, i) => (
         <group key={`pl-${i}`}>
           <mesh position={[-3.5, yEnd / 2, level.z]}>
@@ -236,6 +271,32 @@ function PriceLevelIndicators() {
             <div className="text-[9px] font-mono text-gray-500 whitespace-nowrap select-none">{level.label}</div>
           </Html>
         </group>
+      ))}
+      {/* Key price level glow planes */}
+      {keyLevels.map((level, i) => (
+        <mesh key={`glow-plane-${i}`} position={[0, yEnd / 2, level.z]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[planeWidth, yEnd]} />
+          {level.type === 'current' ? (
+            <meshBasicMaterial
+              ref={materialRef}
+              color={level.color}
+              transparent
+              opacity={level.opacity}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          ) : (
+            <meshStandardMaterial
+              color={level.color}
+              transparent
+              opacity={level.opacity}
+              emissive={level.color}
+              emissiveIntensity={level.emissiveIntensity}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          )}
+        </mesh>
       ))}
     </group>
   );
@@ -283,6 +344,110 @@ function FibonacciLevels() {
           </Html>
         </group>
       ))}
+    </group>
+  );
+}
+
+// Glowing selection ring and vertical beam for selected candle
+function SelectionRing() {
+  const candles = useMarketStore((s) => s.candles);
+  const symbol = useMarketStore((s) => s.symbol);
+  const selectedIndex = useMarketStore((s) => s.selectedCandleIndex);
+  const helixData = useMemo(() => generateHelixData(candles, symbol), [candles, symbol]);
+
+  const buyerRingRef = useRef<THREE.Mesh>(null);
+  const sellerRingRef = useRef<THREE.Mesh>(null);
+  const buyerGlowRef = useRef<THREE.Mesh>(null);
+  const sellerGlowRef = useRef<THREE.Mesh>(null);
+  const beamRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+    // Pulse opacity: 0.8 -> 0.3 -> 0.8
+    const pulseOpacity = 0.55 + Math.sin(time * 3) * 0.25;
+    // Ring expansion: subtle scale pulse
+    const ringScale = 1.0 + Math.sin(time * 2) * 0.08;
+
+    [buyerRingRef, sellerRingRef].forEach((ref) => {
+      if (ref.current) {
+        const mat = ref.current.material as THREE.MeshStandardMaterial;
+        mat.opacity = pulseOpacity;
+        ref.current.scale.setScalar(ringScale);
+      }
+    });
+
+    [buyerGlowRef, sellerGlowRef].forEach((ref) => {
+      if (ref.current) {
+        const mat = ref.current.material as THREE.MeshBasicMaterial;
+        mat.opacity = pulseOpacity * 0.3;
+        ref.current.scale.setScalar(ringScale);
+      }
+    });
+
+    // Beam opacity
+    if (beamRef.current) {
+      const mat = beamRef.current.material as THREE.MeshBasicMaterial;
+      mat.opacity = 0.2 + Math.sin(time * 4) * 0.1;
+    }
+  });
+
+  if (selectedIndex === null || !candles[selectedIndex]) return null;
+  const buyerPoint = helixData.buyers[selectedIndex];
+  const sellerPoint = helixData.sellers[selectedIndex];
+  if (!buyerPoint || !sellerPoint) return null;
+
+  const beamHeight = buyerPoint.position[1] + 1; // from node to grid floor at Y=-1
+
+  return (
+    <group>
+      {/* Buyer side selection ring */}
+      <mesh ref={buyerRingRef} position={buyerPoint.position} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.35, 0.025, 8, 48]} />
+        <meshStandardMaterial
+          color="#FFD700"
+          emissive="#FFD700"
+          emissiveIntensity={1.2}
+          metalness={0.9}
+          roughness={0.1}
+          transparent
+          opacity={0.8}
+        />
+      </mesh>
+      {/* Buyer outer glow ring */}
+      <mesh ref={buyerGlowRef} position={buyerPoint.position} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.35, 0.08, 6, 48]} />
+        <meshBasicMaterial color="#FFD700" transparent opacity={0.25} />
+      </mesh>
+
+      {/* Seller side selection ring */}
+      <mesh ref={sellerRingRef} position={sellerPoint.position} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.35, 0.025, 8, 48]} />
+        <meshStandardMaterial
+          color="#FFD700"
+          emissive="#FFD700"
+          emissiveIntensity={1.2}
+          metalness={0.9}
+          roughness={0.1}
+          transparent
+          opacity={0.8}
+        />
+      </mesh>
+      {/* Seller outer glow ring */}
+      <mesh ref={sellerGlowRef} position={sellerPoint.position} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.35, 0.08, 6, 48]} />
+        <meshBasicMaterial color="#FFD700" transparent opacity={0.25} />
+      </mesh>
+
+      {/* Vertical beam of light from buyer node to grid floor */}
+      <mesh ref={beamRef} position={[buyerPoint.position[0], buyerPoint.position[1] - beamHeight / 2, buyerPoint.position[2]]}>
+        <cylinderGeometry args={[0.015, 0.015, beamHeight, 6]} />
+        <meshBasicMaterial color="#FFD700" transparent opacity={0.25} />
+      </mesh>
+      {/* Vertical beam from seller node to grid floor */}
+      <mesh position={[sellerPoint.position[0], sellerPoint.position[1] - beamHeight / 2, sellerPoint.position[2]]}>
+        <cylinderGeometry args={[0.015, 0.015, beamHeight, 6]} />
+        <meshBasicMaterial color="#FFD700" transparent opacity={0.15} />
+      </mesh>
     </group>
   );
 }
@@ -519,6 +684,7 @@ export function EnergyHelix() {
       {showConnections && <ConnectionBars />}
       <PriceLevelIndicators />
       <FibonacciLevels />
+      <SelectionRing />
       <SelectedCandleLabel />
       <EIADayMarkers />
       <WeatherParticles />
