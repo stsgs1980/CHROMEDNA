@@ -18,6 +18,9 @@ interface UIState {
   // Playback
   showPlaybackBar: boolean;
 
+  // EIA Report Overlay
+  showEIAReport: boolean;
+
   // 3D Controls
   autoRotate: boolean;
   cameraTransition: boolean;
@@ -34,6 +37,7 @@ interface UIState {
   setShowEIALayer: (v: boolean) => void;
   setShowWeatherLayer: (v: boolean) => void;
   togglePlaybackBar: () => void;
+  toggleEIAReport: () => void;
   setAutoRotate: (v: boolean) => void;
   setCameraTransition: (v: boolean) => void;
 }
@@ -53,6 +57,8 @@ export const useUIStore = create<UIState>((set) => ({
 
   showPlaybackBar: false,
 
+  showEIAReport: false,
+
   autoRotate: true,
   cameraTransition: false,
 
@@ -67,6 +73,7 @@ export const useUIStore = create<UIState>((set) => ({
   setShowEIALayer: (showEIALayer) => set({ showEIALayer }),
   setShowWeatherLayer: (showWeatherLayer) => set({ showWeatherLayer }),
   togglePlaybackBar: () => set((s) => ({ showPlaybackBar: !s.showPlaybackBar })),
+  toggleEIAReport: () => set((s) => ({ showEIAReport: !s.showEIAReport })),
   setAutoRotate: (autoRotate) => set({ autoRotate }),
   setCameraTransition: (cameraTransition) => set({ cameraTransition }),
 }));

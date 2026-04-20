@@ -5,10 +5,12 @@ import dynamic from 'next/dynamic';
 import { useMarketStore } from '@/stores/marketStore';
 import { useUIStore } from '@/stores/uiStore';
 import { Header } from '@/components/panels/Header';
+import { LiveTicker } from '@/components/panels/LiveTicker';
 import { LeftPanel } from '@/components/panels/LeftPanel';
 import { RightPanel } from '@/components/panels/RightPanel';
 import { BottomPanel } from '@/components/panels/BottomPanel';
 import { PlaybackBar } from '@/components/panels/PlaybackBar';
+import { EIAReportOverlay } from '@/components/panels/EIAReportOverlay';
 import { generateEnergyData, generateVolumeProfile, generateOrderFlow } from '@/lib/energyGenerators';
 import { calculateCompositeScore } from '@/lib/aiScoring';
 import { PanelLeftOpen, PanelRightOpen, ChevronUp } from 'lucide-react';
@@ -36,23 +38,16 @@ function DataLoader() {
   const prevSymbolRef = useRef(symbol);
 
   useEffect(() => {
-    // Skip if symbol hasn't actually changed (and data already loaded)
     if (symbol === prevSymbolRef.current && useMarketStore.getState().candles.length > 0) {
       return;
     }
     prevSymbolRef.current = symbol;
 
-    // Use Zustand's getState() to get fresh data and set it directly
-    // This avoids React state batching issues
-    const store = useMarketStore.getState();
-    
-    // Generate all data for the current symbol
     const candles = generateEnergyData(symbol, 80);
     const vp = generateVolumeProfile(candles);
     const ofData = generateOrderFlow(candles);
     const score = calculateCompositeScore(candles);
 
-    // Batch all updates together using Zustand's set
     useMarketStore.setState({
       candles,
       volumeProfile: vp,
@@ -62,6 +57,50 @@ function DataLoader() {
       selectedCandleIndex: null,
     });
   }, [symbol]);
+
+  return null;
+}
+
+// Keyboard shortcuts handler
+function KeyboardShortcuts() {
+  const toggleLeftPanel = useUIStore((s) => s.toggleLeftPanel);
+  const toggleRightPanel = useUIStore((s) => s.toggleRightPanel);
+  const toggleBottomPanel = useUIStore((s) => s.toggleBottomPanel);
+  const togglePlaybackBar = useUIStore((s) => s.togglePlaybackBar);
+  const toggleEIAReport = useUIStore((s) => s.toggleEIAReport);
+  const setAutoRotate = useUIStore((s) => s.setAutoRotate);
+  const autoRotate = useUIStore((s) => s.autoRotate);
+  const setLive = useMarketStore((s) => s.setLive);
+  const isLive = useMarketStore((s) => s.isLive);
+  const setSymbol = useMarketStore((s) => s.setSymbol);
+  const showFibonacci = useUIStore((s) => s.showFibonacci);
+  const setShowFibonacci = useUIStore((s) => s.setShowFibonacci);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key.toLowerCase()) {
+        case '1': if (!e.metaKey && !e.ctrlKey) setSymbol('CL'); break;
+        case '2': if (!e.metaKey && !e.ctrlKey) setSymbol('NG'); break;
+        case '3': if (!e.metaKey && !e.ctrlKey) setSymbol('RB'); break;
+        case '4': if (!e.metaKey && !e.ctrlKey) setSymbol('HO'); break;
+        case '[': toggleLeftPanel(); break;
+        case ']': toggleRightPanel(); break;
+        case '\\': toggleBottomPanel(); break;
+        case 'f': setShowFibonacci(!showFibonacci); break;
+        case 'e': toggleEIAReport(); break;
+        case 'p': togglePlaybackBar(); break;
+        case 'r': setAutoRotate(!autoRotate); break;
+        case 'l': setLive(!isLive); break;
+        case '?': break; // Could show a help modal in future
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [toggleLeftPanel, toggleRightPanel, toggleBottomPanel, togglePlaybackBar, toggleEIAReport, setAutoRotate, autoRotate, setLive, isLive, setSymbol, showFibonacci, setShowFibonacci]);
 
   return null;
 }
@@ -83,16 +122,24 @@ export default function Home() {
       {/* Data Loader (invisible) */}
       <DataLoader />
 
-      {/* 3D Canvas (full screen background) - always mounted */}
-      <div className="absolute inset-0">
+      {/* Keyboard Shortcuts (invisible) */}
+      <KeyboardShortcuts />
+
+      {/* 3D Canvas (full screen background) - z-index 0 */}
+      <div className="absolute inset-0 z-0">
         <Scene />
       </div>
 
-      {/* UI Overlay */}
-      <div className="absolute inset-0 pointer-events-none">
+      {/* UI Overlay - z-index above 3D */}
+      <div className="absolute inset-0 pointer-events-none z-10">
         {/* Header */}
         <div className="pointer-events-auto">
           <Header />
+        </div>
+
+        {/* Live Ticker */}
+        <div className="pointer-events-auto">
+          <LiveTicker />
         </div>
 
         {/* Playback Bar (conditional) */}
@@ -124,7 +171,7 @@ export default function Home() {
               variant="ghost"
               size="sm"
               onClick={toggleLeftPanel}
-              className="bg-gray-950/60 backdrop-blur-md border border-white/[0.06] text-gray-500 hover:text-white hover:bg-white/10 rounded-r-lg rounded-l-none h-16 w-6 p-0"
+              className="bg-gray-950/70 backdrop-blur-md border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/10 rounded-r-lg rounded-l-none h-16 w-6 p-0 transition-all duration-200 hover:border-amber-500/20"
             >
               <PanelLeftOpen className="w-3.5 h-3.5" />
             </Button>
@@ -137,7 +184,7 @@ export default function Home() {
               variant="ghost"
               size="sm"
               onClick={toggleRightPanel}
-              className="bg-gray-950/60 backdrop-blur-md border border-white/[0.06] text-gray-500 hover:text-white hover:bg-white/10 rounded-l-lg rounded-r-none h-16 w-6 p-0"
+              className="bg-gray-950/70 backdrop-blur-md border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/10 rounded-l-lg rounded-r-none h-16 w-6 p-0 transition-all duration-200 hover:border-amber-500/20"
             >
               <PanelRightOpen className="w-3.5 h-3.5" />
             </Button>
@@ -150,13 +197,23 @@ export default function Home() {
               variant="ghost"
               size="sm"
               onClick={toggleBottomPanel}
-              className="bg-gray-950/60 backdrop-blur-md border border-white/[0.06] border-b-0 text-gray-500 hover:text-white hover:bg-white/10 rounded-t-lg h-6 w-16 p-0"
+              className="bg-gray-950/70 backdrop-blur-md border border-white/[0.06] border-b-0 text-gray-400 hover:text-white hover:bg-white/10 rounded-t-lg h-6 w-16 p-0 transition-all duration-200 hover:border-amber-500/20"
             >
               <ChevronUp className="w-3.5 h-3.5" />
             </Button>
           </div>
         )}
+
+        {/* Keyboard shortcut hint */}
+        <div className="pointer-events-auto fixed top-14 right-3 z-[60]">
+          <div className="text-[8px] text-gray-700/50 tracking-wider font-mono">
+            [1-4] Symbol · [E] EIA · [P] Play · [R] Rotate · [F] Fib
+          </div>
+        </div>
       </div>
+
+      {/* EIA Report Overlay */}
+      <EIAReportOverlay />
 
       {/* Initial Loading Overlay - only shows on first load */}
       <AnimatePresence>
@@ -171,7 +228,7 @@ export default function Home() {
               <div className="relative">
                 <div className="w-20 h-20 rounded-full border-2 border-amber-400/20 border-t-amber-400 animate-spin" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600" />
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600 animate-subtle-float" />
                 </div>
               </div>
               <div className="text-center">
@@ -181,13 +238,17 @@ export default function Home() {
                 <div className="text-gray-500 text-sm mt-1">
                   Loading Energy Futures...
                 </div>
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-[10px] text-gray-600">Initializing 3D Helix Engine</span>
+                </div>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Symbol transition indicator - subtle, doesn't block 3D */}
+      {/* Symbol transition indicator */}
       <AnimatePresence>
         {isLoading && candles.length > 0 && (
           <motion.div
@@ -197,7 +258,7 @@ export default function Home() {
             transition={{ duration: 0.3 }}
             className="fixed top-16 left-1/2 -translate-x-1/2 z-[90] pointer-events-none"
           >
-            <div className="bg-gray-950/80 backdrop-blur-md border border-amber-500/20 rounded-full px-4 py-1.5 flex items-center gap-2">
+            <div className="bg-gray-950/80 backdrop-blur-md border border-amber-500/20 rounded-full px-4 py-1.5 flex items-center gap-2 shadow-lg shadow-black/30">
               <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               <span className="text-xs text-amber-400 font-medium">Switching to {symbol}...</span>
             </div>
@@ -209,7 +270,7 @@ export default function Home() {
       <footer className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
         <div className="flex items-center justify-center py-1">
           <div className="footer-gradient-text text-[9px] tracking-widest font-medium">
-            CHROME DNA v0.3 · Energy Futures Terminal · Mock Data
+            CHROME DNA v0.4 · Energy Futures Terminal · Mock Data
           </div>
         </div>
       </footer>

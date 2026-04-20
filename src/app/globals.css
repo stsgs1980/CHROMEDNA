@@ -441,6 +441,24 @@ body {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Ticker scroll animation */
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-25%);
+  }
+}
+
+.animate-ticker-scroll {
+  animation: ticker-scroll 30s linear infinite;
+}
+
+.animate-ticker-scroll:hover {
+  animation-play-state: paused;
+}
+
 /* Responsive panel widths */
 @media (max-width: 640px) {
   .panel-responsive-left {

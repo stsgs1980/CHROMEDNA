@@ -132,3 +132,75 @@ Priority Recommendations for Next Phase:
 5. Integrate real market data API (e.g., CME Group, EIA API)
 6. Add export/report generation for investor presentations
 7. Mobile responsive 2D fallback view
+
+---
+Task ID: 7
+Agent: subagent
+Task: Create LiveTicker component
+
+Work Log:
+- Read worklog.md, marketStore.ts, uiStore.ts, energy.ts types to understand project context
+- Read Header.tsx and page.tsx for styling and integration patterns
+- Read globals.css for existing CSS utilities and animations
+- Created /home/z/my-project/src/components/panels/LiveTicker.tsx with:
+  - TickerItem interface for price tick data (symbol, price, prevPrice, change, changePercent, isUp, isNeutral)
+  - generateInitialPrices() to seed starting prices from ENERGY_SYMBOLS base prices with small random offsets
+  - simulateTick() to apply small random price movements based on symbol volatility
+  - useState for prices, prevPrices, and tickCount
+  - useEffect with dynamic 2-4 second interval that only runs when isLive is true
+  - useMemo to build TickerItem[] from current and previous prices
+  - useMemo to quadruple ticker items for seamless infinite scroll
+  - Glassmorphism styling: semi-transparent dark bg (rgba 3,3,8,0.75), backdrop-blur, subtle border
+  - Gradient fade overlays on left/right edges for smooth visual edges
+  - Each tick displays: amber symbol label, white price (tabular-nums), green/red change arrow + value + percentage
+  - Amber separator dots (●) between items
+  - Live indicator (green pulse dot) when isLive is true
+  - Auto-rotate indicator (amber pulse dot) when enabled
+  - framer-motion initial animation (fade in from top)
+  - Height: 28px (h-7), compact trading terminal aesthetic
+- Added CSS keyframe animation `ticker-scroll` to globals.css:
+  - translateX from 0 to -25% over 30s linear infinite (content is 4x duplicated, so -25% = one full set)
+  - Pauses on hover for readability
+- Verified `bun run lint` passes cleanly with zero errors
+- Verified dev server compiles successfully
+
+Stage Summary:
+- LiveTicker component created at /home/z/my-project/src/components/panels/LiveTicker.tsx
+- CSS ticker-scroll animation added to globals.css
+- Lint passes, dev server compiles cleanly
+- Component ready for integration into page.tsx (needs to be imported and placed below Header)
+
+---
+Task ID: 8
+Agent: subagent
+Task: Create EIA Report Overlay component
+
+Work Log:
+- Read worklog.md for project context (CHROME DNA Energy Edition, dark theme, amber accents)
+- Read uiStore.ts and marketStore.ts to understand existing store structure
+- Read Header.tsx to understand EIA countdown component and styling patterns
+- Read RightPanel.tsx for metric card and glassmorphism design patterns
+- Read page.tsx for component integration patterns
+- Modified uiStore.ts: added `showEIAReport: boolean` state (default false) and `toggleEIAReport` action
+- Created /home/z/my-project/src/components/panels/EIAReportOverlay.tsx with:
+  - EIAReportData interface with date, crudeOil/gasoline/distillate/naturalGas (actual/expected/unit), weeklyHistory
+  - generateMockEIAReport() generating realistic data (Crude: -2.1 to +4.5, Gasoline: -1.5 to +3.2, Distillate: -0.8 to +2.1, NatGas: -20 to +60)
+  - InventoryRow subcomponent: icon, label, expected vs actual values, Build/Draw badge with color coding (red=bearish build, green=bullish draw), surprise indicator (amber pulse dot)
+  - WeeklyBarChart subcomponent: 5-week mini bar chart with red/green gradient bars, value labels, week labels
+  - Main overlay: AnimatePresence + framer-motion (slide up + fade + scale spring animation)
+  - Backdrop: black/60 with backdrop-blur-sm, click to close
+  - Centered card: max-w-md, glassmorphism (bg-gray-950/90 + backdrop-blur-xl), amber accent gradient header icon
+  - Close button (X icon), legend (Build/Draw/Surprise), footer with source attribution
+  - Uses lucide-react icons: FileText, X, TrendingUp, TrendingDown, BarChart3
+  - No indigo/blue colors - exclusively amber/orange/gold + green/red for sentiment
+- Updated Header.tsx: changed EIACountdown from `<div>` to `<button>` with onClick={toggleEIAReport}, added hover states with amber accent, cursor-pointer, title tooltip
+- Updated page.tsx: imported EIAReportOverlay, added `<EIAReportOverlay />` before Footer
+- Ran `bun run lint` - passes cleanly with zero errors
+- Verified dev server compiles successfully (no errors in dev.log)
+
+Stage Summary:
+- EIA Report Overlay fully functional with enter/exit animations via framer-motion
+- uiStore extended with showEIAReport/toggleEIAReport
+- EIA countdown button in header now clickable and opens the overlay
+- Overlay displays simulated EIA data with Build/Draw color coding, analyst expectations, and 5-week trend chart
+- Lint passes, dev server compiles cleanly

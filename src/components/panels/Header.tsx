@@ -44,6 +44,7 @@ function formatCountdown(ms: number): string {
 function EIACountdown() {
   const [countdown, setCountdown] = useState('');
   const [isUrgent, setIsUrgent] = useState(false);
+  const toggleEIAReport = useUIStore((s) => s.toggleEIAReport);
 
   useEffect(() => {
     const update = () => {
@@ -58,15 +59,19 @@ function EIACountdown() {
   }, []);
 
   return (
-    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-bold transition-all duration-300 ${
-      isUrgent
-        ? 'border-amber-500/40 bg-amber-500/15 text-amber-400 animate-amber-pulse shadow-sm shadow-amber-500/10'
-        : 'border-white/[0.06] bg-white/[0.03] text-gray-400 hover:border-white/[0.1]'
-    }`}>
+    <button
+      onClick={toggleEIAReport}
+      className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-bold transition-all duration-300 cursor-pointer ${
+        isUrgent
+          ? 'border-amber-500/40 bg-amber-500/15 text-amber-400 animate-amber-pulse shadow-sm shadow-amber-500/10 hover:bg-amber-500/25'
+          : 'border-white/[0.06] bg-white/[0.03] text-gray-400 hover:border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/10'
+      }`}
+      title="View EIA Report"
+    >
       <Clock className={`w-3 h-3 transition-transform duration-300 ${isUrgent ? 'animate-glow-breathe' : ''}`} />
       <span className="hidden lg:inline">EIA</span>
       <span className="tabular-nums number-transition">{countdown}</span>
-    </div>
+    </button>
   );
 }
 
