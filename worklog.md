@@ -59,3 +59,28 @@ Stage Summary:
 - 3D scene visible with DNA helix, particles, and starfield
 - All panels display real mock data
 - VLM verification: 3D scene visible, all panels working, no errors
+
+---
+Task ID: 5
+Agent: CSS Enhancement Agent
+Task: Enhance CSS, add custom scrollbar, improve global styles
+
+Work Log:
+- Read existing globals.css (123 lines) preserving all :root variables, .dark theme, @theme inline, @layer base
+- Appended custom scrollbar styling for WebKit (6px width, transparent track, subtle white thumb with hover state)
+- Added Firefox scrollbar support (scrollbar-width: thin, scrollbar-color)
+- Added custom amber selection colors (::selection with rgba(245,158,11,0.3) background)
+- Added smooth transitions for all interactive elements (button, a, input, [role="button"])
+- Added tabular-nums utility class for monospaced number rendering
+- Added better font rendering (-webkit-font-smoothing, -moz-osx-font-smoothing, text-rendering)
+- Added amber-pulse keyframe animation and .animate-amber-pulse class
+- Added shimmer keyframe animation and .animate-shimmer class
+- Added .gradient-border utility with CSS mask-based gradient border effect
+- Added .glass-card utility with dark glassmorphism styling
+- Added .no-scrollbar utility to hide scrollbars
+- Final file: 233 lines, lint passes cleanly, dev server compiles without errors
+
+Stage Summary:
+- All CSS enhancements applied successfully
+- Custom scrollbar, selection, transitions, animations, and utility classes added
+- No breaking changes to existing styles

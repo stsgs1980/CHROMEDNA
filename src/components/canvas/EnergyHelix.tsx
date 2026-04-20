@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useState, useCallback } from 'react';
+import { useRef, useMemo, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Instance, Instances, Line, Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -32,7 +32,6 @@ function BuyerNodes() {
       {buyers.map((point, i) => {
         const isSelected = selectedIndex === i;
         const isHovered = hoveredIndex === i;
-        const glowFactor = isSelected ? 2.0 : isHovered ? 1.5 : 1.0;
         const scaleMultiplier = isSelected ? 1.5 : isHovered ? 1.3 : 1.0;
 
         return (
@@ -54,19 +53,7 @@ function BuyerNodes() {
               setHoveredIndex(null);
               document.body.style.cursor = 'auto';
             }}
-          >
-            {/* Glow ring on hover/select */}
-            {(isHovered || isSelected) && (
-              <mesh scale={1.6}>
-                <sphereGeometry args={[1, 16, 16]} />
-                <meshBasicMaterial
-                  color={info.buyerColor}
-                  transparent
-                  opacity={isSelected ? 0.25 : 0.15}
-                />
-              </mesh>
-            )}
-          </Instance>
+          />
         );
       })}
     </Instances>
@@ -117,18 +104,7 @@ function SellerNodes() {
               setHoveredIndex(null);
               document.body.style.cursor = 'auto';
             }}
-          >
-            {(isHovered || isSelected) && (
-              <mesh scale={1.6}>
-                <sphereGeometry args={[1, 16, 16]} />
-                <meshBasicMaterial
-                  color={info.sellerColor}
-                  transparent
-                  opacity={isSelected ? 0.25 : 0.15}
-                />
-              </mesh>
-            )}
-          </Instance>
+          />
         );
       })}
     </Instances>
@@ -178,7 +154,6 @@ function ConnectionBars() {
 
   if (connections.length === 0) return null;
 
-  // Only render every Nth connection for performance
   const step = Math.max(1, Math.floor(connections.length / 60));
 
   return (
@@ -216,7 +191,6 @@ function PriceLevelIndicators() {
     const heightPerCandle = 0.35;
     const targetYRange = candles.length * heightPerCandle * 0.6;
 
-    // Generate 5 price levels
     const numLevels = 5;
     const result: { y: number; price: number; label: string }[] = [];
 
@@ -225,11 +199,7 @@ function PriceLevelIndicators() {
       const price = minPrice + frac * priceRange;
       const y = frac * targetYRange - targetYRange / 2;
       const decimals = symbol === 'CL' ? 2 : 4;
-      result.push({
-        y,
-        price,
-        label: price.toFixed(decimals),
-      });
+      result.push({ y, price, label: price.toFixed(decimals) });
     }
 
     return result;
@@ -244,7 +214,6 @@ function PriceLevelIndicators() {
     <group>
       {levels.map((level, i) => (
         <group key={`price-level-${i}`}>
-          {/* Horizontal line across the helix Z extent */}
           <Line
             points={[
               [-3, level.y, zStart],
@@ -258,7 +227,6 @@ function PriceLevelIndicators() {
             dashSize={0.2}
             gapSize={0.1}
           />
-          {/* Price label */}
           <Html
             position={[-3.2, level.y, zEnd / 2]}
             center
@@ -275,15 +243,82 @@ function PriceLevelIndicators() {
   );
 }
 
+// Fibonacci retracement levels in 3D
+function FibonacciLevels() {
+  const showFibonacci = useUIStore((s) => s.showFibonacci);
+  const candles = useMarketStore((s) => s.candles);
+  const symbol = useMarketStore((s) => s.symbol);
+
+  const fibLevels = useMemo(() => {
+    if (!showFibonacci || candles.length < 10) return [];
+
+    const recent = candles.slice(-50);
+    const high = Math.max(...recent.map(c => c.high));
+    const low = Math.min(...recent.map(c => c.low));
+    const range = high - low;
+
+    const closes = candles.map(c => c.close);
+    const allMin = Math.min(...closes);
+    const allMax = Math.max(...closes);
+    const allRange = allMax - allMin || 1;
+    const targetYRange = candles.length * 0.35 * 0.6;
+
+    const yForPrice = (price: number) => ((price - allMin) / allRange) * targetYRange - targetYRange / 2;
+
+    const ratios = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+    const labels = ['0%', '23.6%', '38.2%', '50%', '61.8%', '78.6%', '100%'];
+
+    return ratios.map((ratio, i) => ({
+      y: yForPrice(low + range * ratio),
+      label: labels[i],
+      price: low + range * ratio,
+      color: ratio === 0.618 || ratio === 0.382 ? '#9370DB' : '#6B21A8',
+      opacity: ratio === 0.618 || ratio === 0.382 ? 0.3 : 0.15,
+    }));
+  }, [candles, symbol, showFibonacci]);
+
+  if (fibLevels.length === 0) return null;
+
+  const zEnd = candles.length * 0.35;
+
+  return (
+    <group>
+      {fibLevels.map((level, i) => (
+        <group key={`fib-${i}`}>
+          <Line
+            points={[[-2.5, level.y, 0], [-2.5, level.y, zEnd]]}
+            color={level.color}
+            lineWidth={0.8}
+            transparent
+            opacity={level.opacity}
+          />
+          <Html
+            position={[-2.8, level.y, zEnd / 2]}
+            center
+            distanceFactor={10}
+            style={{ pointerEvents: 'none' }}
+          >
+            <div className="text-[8px] font-mono text-purple-400/60 whitespace-nowrap select-none">
+              {level.label}
+            </div>
+          </Html>
+        </group>
+      ))}
+    </group>
+  );
+}
+
 function SelectedCandleLabel() {
   const candles = useMarketStore((s) => s.candles);
   const symbol = useMarketStore((s) => s.symbol);
   const selectedIndex = useMarketStore((s) => s.selectedCandleIndex);
   const info = ENERGY_SYMBOLS[symbol];
 
+  // Memoize the helix data to avoid re-computing during render
+  const helixData = useMemo(() => generateHelixData(candles, symbol), [candles, symbol]);
+
   if (selectedIndex === null || !candles[selectedIndex]) return null;
 
-  const helixData = generateHelixData(candles, symbol);
   const point = helixData.buyers[selectedIndex];
   if (!point) return null;
 
@@ -293,13 +328,10 @@ function SelectedCandleLabel() {
   const isUp = change >= 0;
   const decimals = symbol === 'CL' ? 2 : 4;
 
-  // Format timestamp
   const date = new Date(candle.time * 1000);
   const timeStr = date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   });
 
   return (
@@ -308,32 +340,22 @@ function SelectedCandleLabel() {
       center
       distanceFactor={8}
     >
-      <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-lg px-4 py-3 text-white min-w-[200px] shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2">
+      <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-lg px-3 py-2.5 text-white min-w-[180px] shadow-2xl">
+        <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-amber-400">{info.symbol}</span>
             <span className="text-[10px] text-gray-400">{timeStr}</span>
           </div>
-          <span
-            className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-              isUp ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-            }`}
-          >
-            {isUp ? '▲' : '▼'} {isUp ? '+' : ''}
-            {changePercent}%
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+            isUp ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+          }`}>
+            {isUp ? '▲' : '▼'} {isUp ? '+' : ''}{changePercent}%
           </span>
         </div>
 
-        {/* Price */}
-        <div className="text-lg font-bold tracking-tight">{candle.close.toFixed(decimals)}</div>
-        <div className={`text-xs ${isUp ? 'text-green-400' : 'text-red-400'}`}>
-          {isUp ? '+' : ''}
-          {change.toFixed(decimals)}
-        </div>
+        <div className="text-base font-bold tracking-tight">{candle.close.toFixed(decimals)}</div>
 
-        {/* OHLCV Grid */}
-        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2 pt-2 border-t border-white/5">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1.5 pt-1.5 border-t border-white/5">
           <div className="flex justify-between text-[10px]">
             <span className="text-gray-500">O</span>
             <span className="text-gray-300">{candle.open.toFixed(decimals)}</span>
@@ -352,56 +374,18 @@ function SelectedCandleLabel() {
           </div>
         </div>
 
-        {/* Volume & Delta */}
-        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1.5 pt-1.5 border-t border-white/5">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-white/5">
           <div className="flex justify-between text-[10px]">
             <span className="text-gray-500">Vol</span>
             <span className="text-gray-300">{(candle.volume / 1000).toFixed(0)}K</span>
           </div>
           <div className="flex justify-between text-[10px]">
-            <span className="text-gray-500">OI</span>
-            <span className="text-gray-300">{(candle.openInterest / 1000).toFixed(1)}K</span>
+            <span className="text-gray-500">Delta</span>
+            <span className={(candle.delta || 0) >= 0 ? 'text-green-400' : 'text-red-400'}>
+              {((candle.delta || 0) / 1000).toFixed(1)}K
+            </span>
           </div>
-          {(candle.delta !== undefined) && (
-            <div className="flex justify-between text-[10px]">
-              <span className="text-gray-500">Delta</span>
-              <span className={candle.delta >= 0 ? 'text-green-400' : 'text-red-400'}>
-                {candle.delta >= 0 ? '+' : ''}{candle.delta?.toFixed(0)}
-              </span>
-            </div>
-          )}
-          {(candle.buyVolume !== undefined) && (
-            <div className="flex justify-between text-[10px]">
-              <span className="text-gray-500">Buy</span>
-              <span className="text-green-400">{(candle.buyVolume! / 1000).toFixed(0)}K</span>
-            </div>
-          )}
         </div>
-
-        {/* Energy Metrics */}
-        {(candle.eiaExpectation || candle.weatherImpact !== undefined || candle.seasonalFactor !== undefined) && (
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1.5 pt-1.5 border-t border-white/5">
-            {candle.eiaExpectation && (
-              <div className="flex justify-between text-[10px]">
-                <span className="text-gray-500">EIA</span>
-                <span className={`capitalize ${
-                  candle.eiaExpectation === 'build' ? 'text-red-400' :
-                  candle.eiaExpectation === 'draw' ? 'text-green-400' : 'text-gray-400'
-                }`}>
-                  {candle.eiaExpectation}
-                </span>
-              </div>
-            )}
-            {candle.weatherImpact !== undefined && (
-              <div className="flex justify-between text-[10px]">
-                <span className="text-gray-500">Wx</span>
-                <span className={candle.weatherImpact >= 0 ? 'text-amber-400' : 'text-cyan-400'}>
-                  {candle.weatherImpact > 0 ? '+' : ''}{candle.weatherImpact}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </Html>
   );
@@ -427,6 +411,7 @@ export function EnergyHelix() {
       <SpiralTubes />
       {showConnections && <ConnectionBars />}
       <PriceLevelIndicators />
+      <FibonacciLevels />
       <SelectedCandleLabel />
     </group>
   );

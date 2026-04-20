@@ -15,6 +15,9 @@ interface UIState {
   showEIALayer: boolean;
   showWeatherLayer: boolean;
 
+  // Playback
+  showPlaybackBar: boolean;
+
   // 3D Controls
   autoRotate: boolean;
   cameraTransition: boolean;
@@ -30,6 +33,7 @@ interface UIState {
   setShowFibonacci: (v: boolean) => void;
   setShowEIALayer: (v: boolean) => void;
   setShowWeatherLayer: (v: boolean) => void;
+  togglePlaybackBar: () => void;
   setAutoRotate: (v: boolean) => void;
   setCameraTransition: (v: boolean) => void;
 }
@@ -47,6 +51,8 @@ export const useUIStore = create<UIState>((set) => ({
   showEIALayer: false,
   showWeatherLayer: false,
 
+  showPlaybackBar: false,
+
   autoRotate: true,
   cameraTransition: false,
 
@@ -60,6 +66,7 @@ export const useUIStore = create<UIState>((set) => ({
   setShowFibonacci: (showFibonacci) => set({ showFibonacci }),
   setShowEIALayer: (showEIALayer) => set({ showEIALayer }),
   setShowWeatherLayer: (showWeatherLayer) => set({ showWeatherLayer }),
+  togglePlaybackBar: () => set((s) => ({ showPlaybackBar: !s.showPlaybackBar })),
   setAutoRotate: (autoRotate) => set({ autoRotate }),
   setCameraTransition: (cameraTransition) => set({ cameraTransition }),
 }));
