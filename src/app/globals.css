@@ -1375,3 +1375,71 @@ body {
 .price-tick-animate {
   animation: price-tick-pulse 0.3s ease-out;
 }
+
+/* ─── CHROME DNA Task 16-a: Depth Perception & CSS Polish ─── */
+
+/* Depth glow shadow - layered amber box shadow for depth perception */
+.depth-glow-shadow {
+  box-shadow:
+    0 0 8px rgba(245, 158, 11, 0.06),
+    0 2px 12px rgba(245, 158, 11, 0.04),
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* Data bar animated - gradient bar with traveling shimmer effect */
+@keyframes shimmer-travel {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.data-bar-animated {
+  background: linear-gradient(
+    90deg,
+    rgba(245, 158, 11, 0.3) 0%,
+    rgba(245, 158, 11, 0.5) 25%,
+    rgba(251, 191, 36, 0.8) 50%,
+    rgba(245, 158, 11, 0.5) 75%,
+    rgba(245, 158, 11, 0.3) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-travel 2.5s ease-in-out infinite;
+}
+
+/* Panel inner glow - subtle amber inner glow for panel borders */
+.panel-inner-glow {
+  box-shadow:
+    inset 0 0 12px rgba(245, 158, 11, 0.03),
+    inset 0 1px 0 rgba(245, 158, 11, 0.06),
+    inset 0 -1px 0 rgba(245, 158, 11, 0.02);
+}
+
+/* Tooltip glow amber - amber glow shadow for tooltips */
+.tooltip-glow-amber {
+  box-shadow:
+    0 0 12px rgba(245, 158, 11, 0.15),
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(245, 158, 11, 0.1);
+}
+
+/* Status indicator pulse - scale + opacity pulse for live status indicators */
+@keyframes status-indicator-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.7;
+  }
+}
+
+.status-indicator-pulse {
+  animation: status-indicator-pulse 2s ease-in-out infinite;
+}
+
+/* Scroll fade edges - fade top and bottom of scrollable areas */
+.scroll-fade-edges {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%);
+}

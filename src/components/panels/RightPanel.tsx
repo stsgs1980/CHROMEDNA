@@ -6,6 +6,8 @@ import { TrendingUp, TrendingDown, Minus, BarChart3, Brain, Droplets, Thermomete
 import { Watchlist } from '@/components/panels/Watchlist';
 import { RiskCalculator } from '@/components/panels/RiskCalculator';
 import { PerformanceHeatmap } from '@/components/panels/PerformanceHeatmap';
+import { MultiTimeframeComparison } from '@/components/panels/MultiTimeframeComparison';
+import { SentimentGauge } from '@/components/panels/SentimentGauge';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -1158,8 +1160,18 @@ export function RightPanel() {
 
               <div className="section-divider-enhanced" />
 
+              {/* Sentiment Gauge */}
+              <SentimentGauge />
+
+              <div className="section-divider-enhanced" />
+
               {/* Watchlist */}
               <Watchlist />
+
+              <div className="section-divider-enhanced" />
+
+              {/* Multi-Timeframe Comparison */}
+              <MultiTimeframeComparison />
 
               {/* Bottom padding */}
               <div className="h-4" />

@@ -343,21 +343,129 @@ function DataStreamEffect() {
   );
 }
 
-function AxisLabels() {
+// 3D Helix Axis Arrow indicators - cone geometry arrows at the end of each axis
+function HelixAxisArrows() {
+  const candles = useMarketStore((s) => s.candles);
+  const symbol = useMarketStore((s) => s.symbol);
+
+  // Calculate helix top position and Z-axis end position
+  const axisData = useMemo(() => {
+    if (candles.length === 0) return null;
+    const yTop = candles.length * 0.22; // HEIGHT_PER_CANDLE
+    const prices = candles.map((c) => c.close);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice || 1;
+    const targetZRange = 3;
+    const zEnd = targetZRange / 2; // max Z position (highest price)
+
+    return { yTop, zEnd };
+  }, [candles, symbol]);
+
+  // Pulse the point lights
+  const timeLightRef = useRef<THREE.PointLight>(null);
+  const priceLightRef = useRef<THREE.PointLight>(null);
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+    const pulseIntensity = 0.8 + Math.sin(time * 2) * 0.3;
+    if (timeLightRef.current) timeLightRef.current.intensity = pulseIntensity;
+    if (priceLightRef.current) priceLightRef.current.intensity = pulseIntensity * 0.7;
+  });
+
+  if (!axisData) return null;
+
+  const { yTop, zEnd } = axisData;
+
   return (
     <group>
+      {/* TIME arrow: Green cone at top of Y axis */}
+      <mesh position={[0, yTop + 0.3, 0]}>
+        <coneGeometry args={[0.12, 0.4, 8]} />
+        <meshStandardMaterial
+          color="#22C55E"
+          emissive="#22C55E"
+          emissiveIntensity={0.8}
+          metalness={0.6}
+          roughness={0.3}
+        />
+      </mesh>
+      {/* TIME arrow point light at tip */}
+      <pointLight
+        ref={timeLightRef}
+        position={[0, yTop + 0.5, 0]}
+        color="#22C55E"
+        intensity={0.8}
+        distance={3}
+        decay={2}
+      />
+
+      {/* PRICE arrow: Amber cone at end of Z axis */}
+      <mesh position={[0, yTop / 2, zEnd + 0.3]} rotation={[-Math.PI / 2, 0, 0]}>
+        <coneGeometry args={[0.12, 0.4, 8]} />
+        <meshStandardMaterial
+          color="#F59E0B"
+          emissive="#F59E0B"
+          emissiveIntensity={0.8}
+          metalness={0.6}
+          roughness={0.3}
+        />
+      </mesh>
+      {/* PRICE arrow point light at tip */}
+      <pointLight
+        ref={priceLightRef}
+        position={[0, yTop / 2, zEnd + 0.5]}
+        color="#F59E0B"
+        intensity={0.6}
+        distance={3}
+        decay={2}
+      />
+
       {/* Y-axis label (Time) */}
       <Html
-        position={[-4, 10, 0]}
+        position={[-4, yTop + 0.8, 0]}
         center
         distanceFactor={10}
         style={{ pointerEvents: 'none' }}
       >
-        <div className="text-[10px] font-mono text-gray-500 whitespace-nowrap select-none tracking-widest rotate-90 origin-center">
+        <div className="text-[10px] font-mono text-green-400/70 whitespace-nowrap select-none tracking-widest">
           TIME ↑
         </div>
       </Html>
-      
+
+      {/* Z-axis label (Price) */}
+      <Html
+        position={[0, -2, zEnd + 1]}
+        center
+        distanceFactor={10}
+        style={{ pointerEvents: 'none' }}
+      >
+        <div className="text-[10px] font-mono text-amber-400/70 whitespace-nowrap select-none tracking-widest">
+          PRICE →
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function AxisLabels() {
+  const candles = useMarketStore((s) => s.candles);
+  const yEnd = candles.length > 0 ? candles.length * 0.22 : 10;
+
+  return (
+    <group>
+      {/* Y-axis label (Time) */}
+      <Html
+        position={[-4, yEnd + 0.8, 0]}
+        center
+        distanceFactor={10}
+        style={{ pointerEvents: 'none' }}
+      >
+        <div className="text-[10px] font-mono text-green-400/70 whitespace-nowrap select-none tracking-widest">
+          TIME ↑
+        </div>
+      </Html>
+
       {/* Z-axis label (Price) */}
       <Html
         position={[0, -2, 2]}
@@ -365,7 +473,7 @@ function AxisLabels() {
         distanceFactor={10}
         style={{ pointerEvents: 'none' }}
       >
-        <div className="text-[10px] font-mono text-gray-500 whitespace-nowrap select-none tracking-widest">
+        <div className="text-[10px] font-mono text-amber-400/70 whitespace-nowrap select-none tracking-widest">
           PRICE →
         </div>
       </Html>
@@ -424,6 +532,7 @@ export function Scene() {
         <HolographicGridFloor />
         <EnergyHelix />
         <CameraRig />
+        <HelixAxisArrows />
         <AxisLabels />
         <FloatingParticles />
         <HelixParticleTrail />

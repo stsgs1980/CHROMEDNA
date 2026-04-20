@@ -662,6 +662,219 @@ function WeatherParticles() {
   );
 }
 
+// Pulsing Energy Core - glowing sphere at the center of the DNA helix
+function PulsingEnergyCore() {
+  const candles = useMarketStore((s) => s.candles);
+  const symbol = useMarketStore((s) => s.symbol);
+  const coreRef = useRef<THREE.Mesh>(null);
+  const innerGlowRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const innerMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
+
+  // Compute market regime from candle data for pulse speed
+  const regimeType = useMemo(() => {
+    if (candles.length < 20) return 'QUIET' as const;
+    const recent = candles.slice(-20);
+    const closes = recent.map(c => c.close);
+
+    // Simple volatility check
+    const returns = closes.slice(1).map((c, i) => (c - closes[i]) / closes[i]);
+    const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const variance = returns.reduce((sum, r) => sum + (r - avgReturn) ** 2, 0) / returns.length;
+    const volatility = Math.sqrt(variance);
+
+    const priceRange = Math.max(...closes) - Math.min(...closes);
+    const avgPrice = closes.reduce((a, b) => a + b, 0) / closes.length;
+    const normalizedRange = priceRange / avgPrice;
+
+    if (volatility > 0.02 && normalizedRange > 0.05) return 'VOLATILE' as const;
+    if (normalizedRange < 0.015) return 'QUIET' as const;
+    return 'RANGING' as const;
+  }, [candles, symbol]);
+
+  const midHeight = useMemo(() => {
+    if (candles.length === 0) return 0;
+    return (candles.length * HEIGHT_PER_CANDLE) / 2;
+  }, [candles]);
+
+  // Pulse speed based on regime: VOLATILE = faster, QUIET = slower
+  const pulseSpeed = regimeType === 'VOLATILE' ? 3.0 : regimeType === 'QUIET' ? 0.8 : 1.5;
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+    // Scale pulse: 1.0 → 1.3 → 1.0
+    const scalePulse = 1.0 + Math.sin(time * pulseSpeed) * 0.15;
+
+    if (coreRef.current) {
+      coreRef.current.scale.setScalar(scalePulse);
+    }
+    if (innerGlowRef.current) {
+      innerGlowRef.current.scale.setScalar(scalePulse * 1.6);
+    }
+    if (materialRef.current) {
+      // Emissive intensity pulse
+      materialRef.current.emissiveIntensity = 0.6 + Math.sin(time * pulseSpeed) * 0.4;
+    }
+    if (innerMaterialRef.current) {
+      innerMaterialRef.current.opacity = 0.06 + Math.sin(time * pulseSpeed) * 0.03;
+    }
+  });
+
+  return (
+    <group position={[0, midHeight, 0]}>
+      {/* Core sphere - amber/gold emissive */}
+      <mesh ref={coreRef}>
+        <sphereGeometry args={[0.25, 24, 24]} />
+        <meshStandardMaterial
+          ref={materialRef}
+          color="#F59E0B"
+          emissive="#FBBF24"
+          emissiveIntensity={0.6}
+          metalness={0.8}
+          roughness={0.2}
+          transparent
+          opacity={0.9}
+        />
+      </mesh>
+
+      {/* Inner glow - larger, more transparent sphere */}
+      <mesh ref={innerGlowRef}>
+        <sphereGeometry args={[0.25, 16, 16]} />
+        <meshBasicMaterial
+          ref={innerMaterialRef}
+          color="#FBBF24"
+          transparent
+          opacity={0.06}
+          depthWrite={false}
+          side={THREE.BackSide}
+        />
+      </mesh>
+
+      {/* Point light for ambient glow */}
+      <pointLight color="#F59E0B" intensity={0.5} distance={4} decay={2} />
+    </group>
+  );
+}
+
+// Connecting Energy Arcs - thin lines connecting buyer/seller nodes at key price levels
+function ConnectingEnergyArcs() {
+  const candles = useMarketStore((s) => s.candles);
+  const symbol = useMarketStore((s) => s.symbol);
+
+  const arcData = useMemo(() => {
+    if (candles.length === 0) return [];
+    const { buyers, sellers } = generateHelixData(candles, symbol);
+    if (buyers.length === 0) return [];
+
+    const closes = candles.map((c) => c.close);
+    const highs = candles.map((c) => c.high);
+    const lows = candles.map((c) => c.low);
+    const minPrice = Math.min(...closes);
+    const maxPrice = Math.max(...closes);
+    const priceRange = maxPrice - minPrice || 1;
+
+    const currentPrice = closes[closes.length - 1];
+    const highPrice = Math.max(...highs);
+    const lowPrice = Math.min(...lows);
+
+    // Find indices closest to each key price level
+    const findClosestIndex = (targetPrice: number) => {
+      let closestIdx = 0;
+      let closestDist = Infinity;
+      candles.forEach((c, i) => {
+        const dist = Math.abs(c.close - targetPrice);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closestIdx = i;
+        }
+      });
+      return closestIdx;
+    };
+
+    const keyLevels = [
+      { price: currentPrice, type: 'current' as const },
+      { price: highPrice, type: 'high' as const },
+      { price: lowPrice, type: 'low' as const },
+    ];
+
+    // For each key level, find the 3 closest candles and draw arcs
+    const arcs: { buyerPos: [number, number, number]; sellerPos: [number, number, number]; type: string; phaseOffset: number }[] = [];
+
+    keyLevels.forEach((level) => {
+      // Find 3 closest candles to this price
+      const distances = candles.map((c, i) => ({ idx: i, dist: Math.abs(c.close - level.price) }));
+      distances.sort((a, b) => a.dist - b.dist);
+      const closestIndices = distances.slice(0, 3).map((d) => d.idx);
+
+      closestIndices.forEach((idx, j) => {
+        if (buyers[idx] && sellers[idx]) {
+          arcs.push({
+            buyerPos: buyers[idx].position as [number, number, number],
+            sellerPos: sellers[idx].position as [number, number, number],
+            type: level.type,
+            phaseOffset: j * 0.5,
+          });
+        }
+      });
+    });
+
+    return arcs;
+  }, [candles, symbol]);
+
+  // Create geometry for each arc line
+  const arcGeometries = useMemo(() => {
+    return arcData.map((arc) => {
+      // Create a curved path from buyer to seller
+      const start = new THREE.Vector3(...arc.buyerPos);
+      const end = new THREE.Vector3(...arc.sellerPos);
+
+      // Midpoint with a slight Y offset for arc curvature
+      const mid = start.clone().add(end).multiplyScalar(0.5);
+      mid.y += 0.15; // slight upward arc
+
+      const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+      const points = curve.getPoints(20);
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+      return { geometry, type: arc.type, phaseOffset: arc.phaseOffset };
+    });
+  }, [arcData]);
+
+  const materialRefs = useRef<(THREE.LineBasicMaterial | null)[]>([]);
+
+  // Animate opacity pulse
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+    materialRefs.current.forEach((mat, i) => {
+      if (!mat || !arcData[i]) return;
+      const baseOpacity = arcData[i].type === 'current' ? 0.35 : 0.2;
+      const pulse = Math.sin(time * 1.5 + arcData[i].phaseOffset) * 0.1;
+      mat.opacity = baseOpacity + pulse;
+    });
+  });
+
+  if (arcGeometries.length === 0) return null;
+
+  return (
+    <group>
+      {arcGeometries.map((arc, i) => {
+        const color = arc.type === 'current' ? '#FFD700' : arc.type === 'high' ? '#22C55E' : '#EF4444';
+        return (
+          <line key={`arc-${i}`} geometry={arc.geometry}>
+            <lineBasicMaterial
+              ref={(el) => { materialRefs.current[i] = el; }}
+              color={color}
+              transparent
+              opacity={0.3}
+              depthWrite={false}
+            />
+          </line>
+        );
+      })}
+    </group>
+  );
+}
+
 // Ambient Glow Ring - large semi-transparent torus at helix center
 function AmbientGlowRing() {
   const candles = useMarketStore((s) => s.candles);
@@ -810,6 +1023,8 @@ export function EnergyHelix() {
       <WeatherParticles />
       <VolumeHeatmap />
       <AmbientGlowRing />
+      <PulsingEnergyCore />
+      <ConnectingEnergyArcs />
     </group>
   );
 }
