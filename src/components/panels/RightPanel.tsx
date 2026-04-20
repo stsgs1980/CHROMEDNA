@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus, BarChart3, Brain, Droplets, Thermometer, Activity, Target, Gauge, ArrowUpRight, ArrowDownRight, Zap, Scale, Grid3x3 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -287,7 +287,7 @@ function CorrelationMatrix() {
 
           {/* Matrix rows */}
           {correlationData.map((row, rowIdx) => (
-            <React.Fragment key={`row-${SYMBOLS_ORDER[rowIdx]}`}>
+            <Fragment key={`row-${SYMBOLS_ORDER[rowIdx]}`}>
               {/* Row label */}
               <div
                 key={`r-${SYMBOLS_ORDER[rowIdx]}`}
@@ -319,7 +319,7 @@ function CorrelationMatrix() {
                   </div>
                 );
               })}
-            </>
+            </Fragment>
           ))}
         </div>
 
