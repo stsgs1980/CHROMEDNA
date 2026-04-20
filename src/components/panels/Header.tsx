@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Play, Pause, Zap, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Activity, Play, Pause, Zap, TrendingUp, TrendingDown, Minus, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useMarketStore } from '@/stores/marketStore';
@@ -11,6 +11,64 @@ import { ENERGY_SYMBOLS, EnergySymbol } from '@/types/energy';
 import { DECOMPOSITION_LEVELS } from '@/types/energy';
 
 const SYMBOLS: EnergySymbol[] = ['CL', 'NG', 'RB', 'HO'];
+
+// EIA countdown logic
+function getNextEIA(): Date {
+  const now = new Date();
+  const day = now.getDay();
+  let daysUntilWed = (3 + 7 - day) % 7;
+  if (daysUntilWed === 0) {
+    // It's Wednesday - check if before 10:30 AM
+    if (now.getHours() < 10 || (now.getHours() === 10 && now.getMinutes() < 30)) {
+      daysUntilWed = 0;
+    } else {
+      daysUntilWed = 7;
+    }
+  }
+  const next = new Date(now);
+  next.setDate(now.getDate() + daysUntilWed);
+  next.setHours(10, 30, 0, 0);
+  return next;
+}
+
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return 'NOW!';
+  const days = Math.floor(ms / 86400000);
+  const hours = Math.floor((ms % 86400000) / 3600000);
+  const mins = Math.floor((ms % 3600000) / 60000);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+}
+
+function EIACountdown() {
+  const [countdown, setCountdown] = useState('');
+  const [isUrgent, setIsUrgent] = useState(false);
+
+  useEffect(() => {
+    const update = () => {
+      const next = getNextEIA();
+      const diff = next.getTime() - Date.now();
+      setCountdown(formatCountdown(diff));
+      setIsUrgent(diff > 0 && diff < 3600000); // Less than 1 hour
+    };
+    update();
+    const interval = setInterval(update, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-bold transition-all ${
+      isUrgent
+        ? 'border-amber-500/40 bg-amber-500/15 text-amber-400 animate-amber-pulse'
+        : 'border-white/[0.06] bg-white/[0.03] text-gray-400'
+    }`}>
+      <Clock className="w-3 h-3" />
+      <span className="hidden lg:inline">EIA</span>
+      <span className="tabular-nums">{countdown}</span>
+    </div>
+  );
+}
 
 function MiniSparkline({ candles, isUp, width = 80, height = 28 }: { candles: number[]; isUp: boolean; width?: number; height?: number }) {
   if (candles.length < 2) return null;
@@ -196,6 +254,9 @@ export function Header() {
             </span>
           </div>
         )}
+
+        {/* EIA Countdown */}
+        <EIACountdown />
 
         {/* Controls */}
         <div className="flex items-center gap-1.5 flex-shrink-0">

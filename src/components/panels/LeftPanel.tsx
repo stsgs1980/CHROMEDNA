@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Layers, Eye, EyeOff, RotateCcw, Settings2, Thermometer, Droplets } from 'lucide-react';
+import { Clock, Layers, Eye, EyeOff, RotateCcw, Settings2, Thermometer, Droplets, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
@@ -65,6 +65,8 @@ export function LeftPanel() {
   const setShowWeatherLayer = useUIStore((s) => s.setShowWeatherLayer);
   const autoRotate = useUIStore((s) => s.autoRotate);
   const setAutoRotate = useUIStore((s) => s.setAutoRotate);
+  const showPlaybackBar = useUIStore((s) => s.showPlaybackBar);
+  const togglePlaybackBar = useUIStore((s) => s.togglePlaybackBar);
 
   return (
     <AnimatePresence>
@@ -205,6 +207,13 @@ export function LeftPanel() {
                   icon={<RotateCcw className="w-2.5 h-2.5" />}
                   checked={autoRotate}
                   onChange={setAutoRotate}
+                />
+                <LayerToggle
+                  label="Playback Mode"
+                  icon={<Play className="w-2.5 h-2.5" />}
+                  checked={showPlaybackBar}
+                  onChange={togglePlaybackBar}
+                  color="#F59E0B"
                 />
               </div>
             </div>
