@@ -9,6 +9,7 @@ import { useMarketStore } from '@/stores/marketStore';
 import { useUIStore } from '@/stores/uiStore';
 import { ENERGY_SYMBOLS, EnergySymbol } from '@/types/energy';
 import { DECOMPOSITION_LEVELS } from '@/types/energy';
+import { NotificationCenter } from '@/components/panels/NotificationCenter';
 
 const SYMBOLS: EnergySymbol[] = ['CL', 'NG', 'RB', 'HO'];
 
@@ -63,14 +64,15 @@ function EIACountdown() {
       onClick={toggleEIAReport}
       className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-bold transition-all duration-300 cursor-pointer ${
         isUrgent
-          ? 'border-amber-500/40 bg-amber-500/15 text-amber-400 animate-amber-pulse shadow-sm shadow-amber-500/10 hover:bg-amber-500/25'
-          : 'border-white/[0.06] bg-white/[0.03] text-gray-400 hover:border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/10'
+          ? 'border-amber-500/40 bg-amber-500/15 text-amber-400 animate-amber-pulse shadow-sm shadow-amber-500/10 hover:bg-amber-500/25 eia-urgent-border'
+          : 'border-white/[0.06] bg-white/[0.03] text-gray-400 hover:border-amber-500/30 hover:text-amber-400 hover:bg-amber-500/10 hover:shadow-sm hover:shadow-amber-500/5'
       }`}
       title="View EIA Report"
     >
       <Clock className={`w-3 h-3 transition-transform duration-300 ${isUrgent ? 'animate-glow-breathe' : ''}`} />
       <span className="hidden lg:inline">EIA</span>
       <span className="tabular-nums number-transition">{countdown}</span>
+      {isUrgent && <span className="status-dot status-dot-amber ml-0.5" />}
     </button>
   );
 }
@@ -192,10 +194,10 @@ export function Header() {
                 <button
                   key={s}
                   onClick={() => setSymbol(s)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all duration-200 ${
+                  className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all duration-200 symbol-btn ${
                     isActive
                       ? 'bg-amber-500/20 text-amber-400 shadow-sm shadow-amber-500/10 border border-amber-500/30 active-glow-amber'
-                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 hover:shadow-sm'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 hover:shadow-sm hover:shadow-amber-500/5'
                   }`}
                 >
                   {s}
@@ -214,7 +216,7 @@ export function Header() {
           <div className="flex items-center gap-2.5">
             <MiniSparkline candles={sparklineData} isUp={isUp} width={72} height={24} />
             <div className="text-right">
-              <div className="text-white font-bold text-base lg:text-lg tabular-nums leading-tight">
+              <div className={`text-white font-bold text-base lg:text-lg tabular-nums leading-tight rounded px-1.5 -mx-1.5 transition-colors duration-300 ${isUp ? 'price-pulse-green' : 'price-pulse-red'}`}>
                 {price.toFixed(decDigits)}
               </div>
               <div className="flex items-center gap-1.5">
@@ -228,7 +230,8 @@ export function Header() {
 
           {/* Session Range */}
           <div className="hidden xl:flex flex-col items-end text-[9px] text-gray-500 tabular-nums border-l border-white/[0.06] pl-3 relative">
-            <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-amber-500/20 to-transparent" />
+            <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-amber-500/30 to-transparent" />
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-amber-500/40" />
             <span>H: <span className="text-green-400/80 number-transition">{sessionHigh.toFixed(decDigits)}</span></span>
             <span>L: <span className="text-red-400/80 number-transition">{sessionLow.toFixed(decDigits)}</span></span>
           </div>
@@ -236,16 +239,16 @@ export function Header() {
 
         {/* AI Score Badge */}
         {aiScore && (
-          <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-300 hover:scale-[1.02] ${
+          <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-300 hover:scale-[1.02] shadow-lg ${
             aiScore.signal === 'BULLISH'
-              ? 'border-green-500/30 bg-green-500/10 active-glow-green'
+              ? 'border-green-500/30 bg-green-500/10 active-glow-green shadow-green-500/5'
               : aiScore.signal === 'BEARISH'
-              ? 'border-red-500/30 bg-red-500/10 active-glow-red'
-              : 'border-gray-500/30 bg-gray-500/10'
+              ? 'border-red-500/30 bg-red-500/10 active-glow-red shadow-red-500/5'
+              : 'border-gray-500/30 bg-gray-500/10 shadow-gray-500/5'
           }`}>
             <div className={`w-1.5 h-1.5 rounded-full ${
-              aiScore.signal === 'BULLISH' ? 'bg-green-400 animate-pulse glow-dot-green' :
-              aiScore.signal === 'BEARISH' ? 'bg-red-400 animate-pulse glow-dot-red' : 'bg-gray-400'
+              aiScore.signal === 'BULLISH' ? 'bg-green-400 animate-pulse glow-dot-green status-dot-green' :
+              aiScore.signal === 'BEARISH' ? 'bg-red-400 animate-pulse glow-dot-red status-dot-red' : 'bg-gray-400'
             }`} />
             <span className={`text-xs font-bold number-transition ${
               aiScore.signal === 'BULLISH' ? 'text-green-400' :
@@ -265,6 +268,9 @@ export function Header() {
         {/* EIA Countdown */}
         <EIACountdown />
 
+        {/* Notification Center */}
+        <NotificationCenter />
+
         {/* Controls */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {/* Decomposition Level - compact on mobile */}
@@ -275,8 +281,8 @@ export function Header() {
                 onClick={() => setDecompositionLevel(level.level)}
                 className={`h-6 px-1.5 rounded text-[10px] font-bold transition-all duration-200 ${
                   decompositionLevel === level.level
-                    ? 'bg-amber-500/15 text-amber-300 shadow-sm shadow-amber-500/5 active-glow-amber'
-                    : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'
+                    ? 'bg-gradient-to-br from-amber-500/20 to-amber-500/10 text-amber-300 shadow-sm shadow-amber-500/5 active-glow-amber border border-amber-500/20'
+                    : 'text-gray-600 hover:text-gray-400 hover:bg-white/5 hover:shadow-sm hover:shadow-amber-500/3'
                 }`}
               >
                 {level.level}
@@ -306,6 +312,7 @@ export function Header() {
       {/* Gradient accent line at bottom of header */}
       <div className="h-[1px] bg-gradient-to-r from-transparent via-amber-500/40 to-transparent relative">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-400/20 to-transparent" />
+        <div className="absolute left-1/4 w-1/4 h-[2px] bg-gradient-to-r from-transparent via-amber-400/30 to-transparent shimmer-line" />
       </div>
     </motion.header>
   );

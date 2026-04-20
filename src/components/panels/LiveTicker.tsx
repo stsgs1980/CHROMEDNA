@@ -23,13 +23,13 @@ function getDecimalDigits(symbol: EnergySymbol): number {
   return symbol === 'CL' ? 2 : 4;
 }
 
+// Generate deterministic initial prices (same on server and client) to avoid hydration mismatch
 function generateInitialPrices(): Record<EnergySymbol, number> {
   const prices: Record<EnergySymbol, number> = {} as Record<EnergySymbol, number>;
   for (const sym of SYMBOLS) {
     const info = ENERGY_SYMBOLS[sym];
-    // Small random offset from base price for realism
-    const offset = (Math.random() - 0.5) * info.basePrice * info.volatility * 2;
-    prices[sym] = info.basePrice + offset;
+    // Use base price directly - no randomness during SSR
+    prices[sym] = info.basePrice;
   }
   return prices;
 }
@@ -50,7 +50,7 @@ export function LiveTicker() {
   const autoRotate = useUIStore((s) => s.autoRotate);
 
   const [prices, setPrices] = useState<Record<EnergySymbol, number>>(generateInitialPrices);
-  const [prevPrices, setPrevPrices] = useState<Record<EnergySymbol, number>>(prices);
+  const [prevPrices, setPrevPrices] = useState<Record<EnergySymbol, number>>(generateInitialPrices);
   const [tickCount, setTickCount] = useState(0);
 
   // Simulate live price ticks

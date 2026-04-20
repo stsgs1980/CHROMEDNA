@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Layers, Eye, Thermometer, Droplets, Play, TrendingUp, TrendingDown, Minus, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ interface LayerToggleProps {
 
 function LayerToggle({ label, icon, checked, onChange, color }: LayerToggleProps) {
   return (
-    <div className="flex items-center justify-between py-1.5 hover:bg-white/[0.02] rounded px-1 -mx-1 transition-colors">
+    <div className="flex items-center justify-between layer-toggle-row">
       <div className="flex items-center gap-2">
         <span style={{ color }}>{icon}</span>
         <span className="text-xs text-gray-300">{label}</span>
@@ -46,8 +46,22 @@ function LayerToggle({ label, icon, checked, onChange, color }: LayerToggleProps
 // Market Pulse - Correlation between energy symbols
 function MarketPulse() {
   const symbol = useMarketStore((s) => s.symbol);
+  // useSyncExternalStore avoids hydration mismatch - server gets false, client gets true
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const correlations = useMemo(() => {
+    // Return deterministic placeholder during SSR to avoid hydration mismatch
+    if (!isClient) {
+      const symbols = ['CL', 'NG', 'RB', 'HO'] as const;
+      return symbols.map(s => {
+        const info = ENERGY_SYMBOLS[s];
+        return { symbol: s, change: 0, avgVol: 0, buyerColor: info.buyerColor, isActive: s === symbol, name: info.name };
+      });
+    }
     const symbols = ['CL', 'NG', 'RB', 'HO'] as const;
     return symbols.map(s => {
       const data = generateEnergyData(s, 30);
@@ -57,9 +71,9 @@ function MarketPulse() {
       const avgVol = vol / data.length;
       const info = ENERGY_SYMBOLS[s];
       const isActive = s === symbol;
-      return { symbol: s, change, avgVol, buyerColor: info.buyerColor, isActive, name: info.name };
+      return { symbol: s, change, avgVol, buyerColor: info.buyerColor, isActive: s === symbol, name: info.name };
     });
-  }, [symbol]);
+  }, [symbol, isClient]);
 
   return (
     <div>
@@ -89,7 +103,7 @@ function MarketPulse() {
               <div className="flex items-center gap-2 mt-0.5">
                 <div className="flex-1 h-[3px] bg-white/[0.04] rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${
+                    className={`h-full rounded-full transition-all duration-500 pulse-bar-animated ${
                       c.change >= 0 ? 'bg-green-500/60' : 'bg-red-500/60'
                     }`}
                     style={{ width: `${Math.min(100, Math.abs(c.change) * 10)}%` }}
@@ -159,7 +173,7 @@ export function LeftPanel() {
                   onClick={() => setTimeframe(tf.value)}
                   className={`h-8 text-xs transition-all duration-200 ${
                     timeframe === tf.value
-                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 active-glow-amber'
+                      ? 'tf-btn-active'
                       : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
                   }`}
                 >
@@ -169,7 +183,7 @@ export function LeftPanel() {
             </div>
           </div>
 
-          <div className="section-divider" />
+          <div className="section-divider-enhanced" />
 
           {/* Decomposition Level */}
           <div>
@@ -184,10 +198,10 @@ export function LeftPanel() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setDecompositionLevel(level.level)}
-                  className={`w-full justify-start h-8 text-xs transition-all duration-200 ${
+                  className={`w-full justify-start h-8 text-xs decomp-btn ${
                     decompositionLevel === level.level
-                      ? 'bg-white/10 text-white border border-white/[0.06]'
-                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
+                      ? 'decomp-btn-active text-white border border-white/[0.06]'
+                      : 'text-gray-500 hover:text-gray-300 border border-transparent'
                   }`}
                 >
                   <span className="font-bold mr-2 w-6">{level.level}</span>
@@ -198,7 +212,7 @@ export function LeftPanel() {
             </div>
           </div>
 
-          <div className="section-divider" />
+          <div className="section-divider-enhanced" />
 
           {/* Display Layers */}
           <div>
@@ -258,12 +272,12 @@ export function LeftPanel() {
             </div>
           </div>
 
-          <div className="section-divider" />
+          <div className="section-divider-enhanced" />
 
           {/* Market Pulse - NEW FEATURE */}
           <MarketPulse />
 
-          <div className="section-divider" />
+          <div className="section-divider-enhanced" />
 
           {/* Controls */}
           <div>

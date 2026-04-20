@@ -70,7 +70,9 @@ export function BottomPanel() {
 
   const maxBinCount = deltaDistribution.length > 0 ? Math.max(...deltaDistribution.map((b) => b.count), 1) : 1;
 
-  if (!volumeProfile || volumeProfile.levels.length === 0) return null;
+  if (!volumeProfile || volumeProfile.levels.length === 0) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
@@ -107,13 +109,13 @@ export function BottomPanel() {
             </div>
             <div className="flex items-center gap-2">
               {/* View mode toggle */}
-              <div className="flex items-center bg-white/[0.04] rounded-md p-0.5 border border-white/[0.03]">
+              <div className="flex items-center view-mode-toggle">
                 {(['volume', 'delta', 'both'] as const).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setViewMode(mode)}
                     className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-all ${
-                      viewMode === mode ? 'bg-white/10 text-white' : 'text-gray-600 hover:text-gray-400'
+                      viewMode === mode ? 'active' : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'
                     }`}
                   >
                     {mode}
@@ -144,10 +146,10 @@ export function BottomPanel() {
 
               {/* POC line */}
               <div
-                className="absolute left-0 right-0 border-t border-dashed border-amber-500/30 pointer-events-none"
+                className="absolute left-0 right-0 border-t border-dashed border-amber-500/30 pointer-events-none poc-line-glow"
                 style={{ top: `${((maxPrice - volumeProfile.poc) / priceRange) * 100}%` }}
               >
-                <span className="absolute left-2 -top-3 text-[8px] text-amber-400/60 font-semibold">POC</span>
+                <span className="absolute left-2 -top-3 text-[8px] text-amber-400/60 font-semibold animate-glow-breathe">POC</span>
               </div>
 
               {/* Bars + Price overlay */}
@@ -171,14 +173,14 @@ export function BottomPanel() {
                         {/* Volume bar */}
                         {(viewMode === 'volume' || viewMode === 'both') && (
                           <div
-                            className={`w-full rounded-t-sm transition-all duration-150 ${
+                            className={`w-full rounded-t-sm transition-all duration-150 volume-bar-gradient ${
                               isHovered ? 'opacity-100' : 'opacity-80'
                             } ${
                               isPOC
                                 ? 'bg-amber-400/80 shadow-sm shadow-amber-400/20'
                                 : isVA
-                                ? level.delta >= 0 ? 'bg-green-500/40' : 'bg-red-500/40'
-                                : level.delta >= 0 ? 'bg-green-500/15' : 'bg-red-500/15'
+                                ? level.delta >= 0 ? 'bg-gradient-to-t from-green-500/15 to-green-500/40' : 'bg-gradient-to-t from-red-500/15 to-red-500/40'
+                                : level.delta >= 0 ? 'bg-gradient-to-t from-green-500/5 to-green-500/15' : 'bg-gradient-to-t from-red-500/5 to-red-500/15'
                             }`}
                             style={{ height: `${volPct}%` }}
                           />
@@ -206,7 +208,7 @@ export function BottomPanel() {
 
                         {/* Hover highlight line */}
                         {isHovered && (
-                          <div className="absolute inset-0 bg-white/[0.06] rounded-sm pointer-events-none" />
+                          <div className="absolute inset-0 bg-white/[0.06] rounded-sm pointer-events-none hover-highlight-row" />
                         )}
 
                         {/* Enhanced Tooltip */}
@@ -301,7 +303,7 @@ export function BottomPanel() {
                     >
                       <div
                         className={`w-full rounded-t-sm transition-all duration-150 ${
-                          bin.isPositive ? 'bg-green-400/40' : 'bg-red-400/40'
+                          bin.isPositive ? 'delta-bar-positive' : 'delta-bar-negative'
                         } group-hover/bar:opacity-100 opacity-70`}
                         style={{ height: `${barHeight}%` }}
                       />

@@ -2,14 +2,14 @@
 
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, TrendingDown, Minus, BarChart3, Brain, Droplets, Thermometer, Activity, Target, Gauge, ArrowUpRight, ArrowDownRight, Zap, Scale } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, BarChart3, Brain, Droplets, Thermometer, Activity, Target, Gauge, ArrowUpRight, ArrowDownRight, Zap, Scale, Grid3x3 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMarketStore } from '@/stores/marketStore';
 import { useUIStore } from '@/stores/uiStore';
-import { ENERGY_SYMBOLS } from '@/types/energy';
+import { ENERGY_SYMBOLS, EnergySymbol } from '@/types/energy';
 import { SignalType } from '@/types/energy';
 
 function SignalIcon({ signal }: { signal: SignalType }) {
@@ -34,8 +34,8 @@ function SignalBadge({ signal }: { signal: SignalType }) {
 
 function MetricCard({ label, value, color = 'text-white', subtext }: { label: string; value: string; color?: string; subtext?: string }) {
   return (
-    <div className="metric-card rounded-md px-2.5 py-1.5">
-      <div className="text-[9px] text-gray-500 uppercase tracking-wider">{label}</div>
+    <div className="metric-card-enhanced rounded-md px-2.5 py-1.5">
+      <div className="data-label">{label}</div>
       <div className={`text-sm font-semibold tabular-nums ${color}`}>{value}</div>
       {subtext && <div className="text-[9px] text-gray-600 tabular-nums">{subtext}</div>}
     </div>
@@ -64,9 +64,9 @@ function MiniCandleChart({ candles, width = 248, height = 80 }: { candles: { ope
   }).join(' ');
 
   return (
-    <div className="bg-white/[0.02] rounded-lg border border-white/[0.04] p-2">
+    <div className="bg-white/[0.02] rounded-lg border border-white/[0.04] p-2 animated-gradient-border">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[9px] text-gray-500 uppercase tracking-wider">Price Chart (Last 20)</span>
+        <span className="data-label">Price Chart (Last 20)</span>
         <span className="text-[9px] text-gray-600">{candles.length} candles</span>
       </div>
       <svg width={width} height={height} className="w-full">
@@ -181,7 +181,7 @@ function OrderFlowSection() {
             const sellWidth = (level.sellVolume / maxVol) * 100;
             const hasImbalance = level.imbalance;
             return (
-              <div key={i} className={`flex items-center gap-1.5 text-[9px] py-0.5 ${hasImbalance ? 'bg-white/[0.03] rounded px-1' : ''}`}>
+              <div key={i} className={`flex items-center gap-1.5 text-[9px] py-0.5 order-flow-level ${hasImbalance ? 'bg-white/[0.03] px-1' : ''}`}>
                 <span className="text-gray-500 tabular-nums w-[52px] flex-shrink-0">{level.price.toFixed(decDigits)}</span>
                 {/* Buy bar */}
                 <div className="flex-1 flex items-center">
@@ -200,6 +200,146 @@ function OrderFlowSection() {
               </div>
             );
           })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cross-Symbol Correlation Matrix
+const SYMBOLS_ORDER: EnergySymbol[] = ['CL', 'NG', 'RB', 'HO'];
+
+function getCorrelationColor(value: number): { bg: string; text: string } {
+  const magnitude = Math.abs(value);
+  if (value >= 0) {
+    // Green for positive correlation
+    const opacity = 0.05 + magnitude * 0.25;
+    return {
+      bg: `rgba(74, 222, 128, ${opacity})`,
+      text: magnitude > 0.5 ? 'text-green-400' : magnitude > 0.2 ? 'text-green-400/70' : 'text-gray-400',
+    };
+  } else {
+    // Red for negative correlation
+    const opacity = 0.05 + magnitude * 0.25;
+    return {
+      bg: `rgba(248, 113, 113, ${opacity})`,
+      text: magnitude > 0.5 ? 'text-red-400' : magnitude > 0.2 ? 'text-red-400/70' : 'text-gray-400',
+    };
+  }
+}
+
+function CorrelationMatrix() {
+  const candles = useMarketStore((s) => s.candles);
+  const symbol = useMarketStore((s) => s.symbol);
+
+  // Generate mock correlation matrix based on energy market relationships
+  const correlationData = useMemo(() => {
+    // Base correlation structure for energy markets (realistic relationships)
+    // CL-RB: high positive (gasoline derived from crude)
+    // CL-HO: high positive (heating oil from crude)
+    // NG-CL: moderate positive (substitute effect)
+    // RB-HO: very high positive (both refined products)
+    const baseCorrelations: Record<string, number> = {
+      'CL-CL': 1.0, 'CL-NG': 0.42, 'CL-RB': 0.87, 'CL-HO': 0.83,
+      'NG-CL': 0.42, 'NG-NG': 1.0, 'NG-RB': 0.35, 'NG-HO': 0.51,
+      'RB-CL': 0.87, 'RB-NG': 0.35, 'RB-RB': 1.0, 'RB-HO': 0.92,
+      'HO-CL': 0.83, 'HO-NG': 0.51, 'HO-RB': 0.92, 'HO-HO': 1.0,
+    };
+
+    // Add small random variation based on candle data to make it dynamic
+    const seed = candles.length > 0 ? candles[candles.length - 1].time % 1000 : 0;
+    const variation = (seed / 1000) * 0.08 - 0.04; // ±0.04
+
+    return SYMBOLS_ORDER.map((row) =>
+      SYMBOLS_ORDER.map((col) => {
+        const key = `${row}-${col}`;
+        const base = baseCorrelations[key] ?? 0;
+        // Diagonal is always 1.0
+        if (row === col) return { value: 1.0, row, col };
+        // Add small variation
+        const varied = Math.max(-1, Math.min(1, base + variation));
+        return { value: parseFloat(varied.toFixed(2)), row, col };
+      })
+    );
+  }, [candles]);
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <Grid3x3 className="w-3.5 h-3.5 text-amber-400" />
+        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Correlation Matrix</span>
+        <span className="text-[9px] text-gray-600 ml-auto">4 symbols</span>
+      </div>
+      <div className="bg-white/[0.02] rounded-lg border border-white/[0.04] p-3">
+        {/* Column headers */}
+        <div className="grid gap-[2px]" style={{ gridTemplateColumns: `28px repeat(4, 1fr)` }}>
+          <div /> {/* Empty top-left corner */}
+          {SYMBOLS_ORDER.map((s) => (
+            <div
+              key={`h-${s}`}
+              className={`text-[9px] font-bold text-center py-1 ${
+                s === symbol ? 'text-amber-400' : 'text-gray-500'
+              }`}
+            >
+              {s}
+            </div>
+          ))}
+
+          {/* Matrix rows */}
+          {correlationData.map((row, rowIdx) => (
+            <React.Fragment key={`row-${SYMBOLS_ORDER[rowIdx]}`}>
+              {/* Row label */}
+              <div
+                key={`r-${SYMBOLS_ORDER[rowIdx]}`}
+                className={`text-[9px] font-bold flex items-center justify-end pr-1 ${
+                  SYMBOLS_ORDER[rowIdx] === symbol ? 'text-amber-400' : 'text-gray-500'
+                }`}
+              >
+                {SYMBOLS_ORDER[rowIdx]}
+              </div>
+
+              {/* Row cells */}
+              {row.map((cell, colIdx) => {
+                const colors = getCorrelationColor(cell.value);
+                const isDiagonal = rowIdx === colIdx;
+                const isActive = SYMBOLS_ORDER[rowIdx] === symbol || SYMBOLS_ORDER[colIdx] === symbol;
+
+                return (
+                  <div
+                    key={`c-${SYMBOLS_ORDER[rowIdx]}-${SYMBOLS_ORDER[colIdx]}`}
+                    className={`rounded-sm flex items-center justify-center py-1.5 text-[9px] font-semibold tabular-nums transition-all duration-300 ${
+                      isDiagonal ? 'ring-1 ring-inset ring-white/10' : ''
+                    } ${isActive ? 'ring-1 ring-inset ring-amber-500/15' : ''}`}
+                    style={{ backgroundColor: colors.bg }}
+                    title={`${SYMBOLS_ORDER[rowIdx]}/${SYMBOLS_ORDER[colIdx]}: ${cell.value.toFixed(2)}`}
+                  >
+                    <span className={isDiagonal ? 'text-white/40' : colors.text}>
+                      {cell.value.toFixed(2)}
+                    </span>
+                  </div>
+                );
+              })}
+            </>
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-white/[0.04]">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-2 rounded-sm" style={{ backgroundColor: 'rgba(248,113,113,0.2)' }} />
+              <span className="text-[8px] text-gray-600">Neg</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-2 rounded-sm bg-white/[0.05]" />
+              <span className="text-[8px] text-gray-600">0</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-2 rounded-sm" style={{ backgroundColor: 'rgba(74,222,128,0.2)' }} />
+              <span className="text-[8px] text-gray-600">Pos</span>
+            </div>
+          </div>
+          <span className="text-[8px] text-gray-600">30D rolling</span>
         </div>
       </div>
     </div>
@@ -286,7 +426,7 @@ export function RightPanel() {
               {/* Mini Candle Chart */}
               <MiniCandleChart candles={last20Candles} />
 
-              <div className="section-divider" />
+              <div className="section-divider-enhanced" />
 
               {/* AI Score with Gauge */}
               <div>
@@ -298,7 +438,7 @@ export function RightPanel() {
                   <div className="space-y-3">
                     {/* Score Gauge */}
                     <div className="flex items-center gap-4">
-                      <div className="relative flex-shrink-0">
+                      <div className="relative flex-shrink-0 ai-gauge-glow">
                         <svg width="72" height="72" viewBox="0 0 72 72">
                           {/* Background arc */}
                           <circle
@@ -310,13 +450,23 @@ export function RightPanel() {
                             strokeDashoffset="-44"
                             strokeLinecap="round"
                           />
-                          {/* Score arc */}
+                          {/* Score arc with glow filter */}
+                          <defs>
+                            <filter id="gauge-glow" x="-20%" y="-20%" width="140%" height="140%">
+                              <feGaussianBlur stdDeviation="2" result="blur" />
+                              <feMerge>
+                                <feMergeNode in="blur" />
+                                <feMergeNode in="SourceGraphic" />
+                              </feMerge>
+                            </filter>
+                          </defs>
                           <path
                             d={scoreArc.path}
                             fill="none"
                             stroke={scoreArc.color}
                             strokeWidth="5"
                             strokeLinecap="round"
+                            filter="url(#gauge-glow)"
                           />
                           {/* Score text */}
                           <text x="36" y="34" textAnchor="middle" className="text-lg font-bold" fill="white" fontSize="16" fontFamily="monospace">
@@ -339,7 +489,7 @@ export function RightPanel() {
                               initial={{ width: 0 }}
                               animate={{ width: `${aiScore.confidence}%` }}
                               transition={{ duration: 1, ease: 'easeOut' }}
-                              className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400"
+                              className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 confidence-bar-fill"
                             />
                           </div>
                         </div>
@@ -394,12 +544,12 @@ export function RightPanel() {
                 )}
               </div>
 
-              <div className="section-divider" />
+              <div className="section-divider-enhanced" />
 
               {/* Order Flow Section */}
               <OrderFlowSection />
 
-              <div className="section-divider" />
+              <div className="section-divider-enhanced" />
 
               {/* Energy Metrics */}
               <div>
@@ -409,7 +559,7 @@ export function RightPanel() {
                 </div>
                 {candle ? (
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between py-2 px-3 rounded-md bg-white/[0.03] border border-white/[0.03] hover:border-white/[0.06] transition-colors">
+                    <div className="flex items-center justify-between py-2 px-3 rounded-md bg-white/[0.03] border border-white/[0.03] energy-metric-item">
                       <div className="flex items-center gap-2">
                         <Droplets className="w-3.5 h-3.5 text-green-400" />
                         <span className="text-[11px] text-gray-400">EIA Report</span>
@@ -424,7 +574,7 @@ export function RightPanel() {
                          candle.eiaExpectation?.toUpperCase() || 'N/A'}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between py-2 px-3 rounded-md bg-white/[0.03] border border-white/[0.03] hover:border-white/[0.06] transition-colors">
+                    <div className="flex items-center justify-between py-2 px-3 rounded-md bg-white/[0.03] border border-white/[0.03] energy-metric-item">
                       <div className="flex items-center gap-2">
                         <Thermometer className="w-3.5 h-3.5 text-orange-400" />
                         <span className="text-[11px] text-gray-400">Weather Impact</span>
@@ -444,7 +594,7 @@ export function RightPanel() {
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between py-2 px-3 rounded-md bg-white/[0.03] border border-white/[0.03] hover:border-white/[0.06] transition-colors">
+                    <div className="flex items-center justify-between py-2 px-3 rounded-md bg-white/[0.03] border border-white/[0.03] energy-metric-item">
                       <div className="flex items-center gap-2">
                         <Activity className="w-3.5 h-3.5 text-cyan-400" />
                         <span className="text-[11px] text-gray-400">Seasonal Factor</span>
@@ -461,6 +611,11 @@ export function RightPanel() {
                   </div>
                 ) : null}
               </div>
+
+              <div className="section-divider-enhanced" />
+
+              {/* Cross-Symbol Correlation Matrix */}
+              <CorrelationMatrix />
 
               {/* Bottom padding */}
               <div className="h-4" />
