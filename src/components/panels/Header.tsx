@@ -152,6 +152,19 @@ export function Header() {
 
   const decDigits = symbol === 'CL' ? 2 : 4;
 
+  // Derive tick direction from last two candles (no ref/effect needed)
+  const lastTickDirection: 'up' | 'down' | null = useMemo(() => {
+    if (candles.length < 2) return null;
+    const prev = candles[candles.length - 2].close;
+    const curr = candles[candles.length - 1].close;
+    return curr > prev ? 'up' : curr < prev ? 'down' : null;
+  }, [candles]);
+
+  // Key for re-triggering pulse animation on price change
+  const priceKey = useMemo(() => {
+    return candles.length > 0 ? candles[candles.length - 1].close * 10000 : 0;
+  }, [candles]);
+
   // BID/ASK derivation from candle data
   const bidAskData = useMemo(() => {
     if (!latestCandle) return { bid: 0, ask: 0, spread: 0 };
@@ -226,8 +239,29 @@ export function Header() {
           <div className="flex items-center gap-2.5">
             <MiniSparkline candles={sparklineData} isUp={isUp} width={72} height={24} />
             <div className="text-right">
-              <div className={`text-white font-bold text-base lg:text-lg tabular-nums leading-tight rounded px-1.5 -mx-1.5 transition-colors duration-300 ${isUp ? 'price-pulse-green' : 'price-pulse-red'}`}>
-                {price.toFixed(decDigits)}
+              <div className="flex items-center gap-1.5 justify-end">
+                {/* Last tick indicator dot */}
+                <span
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                    lastTickDirection === 'up'
+                      ? 'bg-green-400 shadow-[0_0_4px_1px_rgba(74,222,128,0.5)]'
+                      : lastTickDirection === 'down'
+                        ? 'bg-red-400 shadow-[0_0_4px_1px_rgba(248,113,113,0.5)]'
+                        : 'bg-gray-600'
+                  }`}
+                />
+                {/* Tick direction arrow */}
+                {lastTickDirection && (
+                  <span className={`text-[10px] font-bold transition-opacity duration-300 ${lastTickDirection === 'up' ? 'text-green-400' : 'text-red-400'}`}>
+                    {lastTickDirection === 'up' ? '▲' : '▼'}
+                  </span>
+                )}
+                <div
+                  key={priceKey}
+                  className={`text-white font-bold text-base lg:text-lg tabular-nums leading-tight rounded px-1.5 -mx-1.5 transition-all duration-300 ${isUp ? 'price-pulse-green' : 'price-pulse-red'} price-tick-animate`}
+                >
+                  {price.toFixed(decDigits)}
+                </div>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className={`text-[11px] font-medium tabular-nums ${isUp ? 'text-green-400' : 'text-red-400'}`}>
@@ -333,7 +367,7 @@ export function Header() {
             onClick={() => setLive(!isLive)}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all duration-300 hover:scale-[1.02] ${
               isLive
-                ? 'bg-green-600/20 text-green-400 border border-green-500/30 shadow-sm shadow-green-500/10 active-glow-green'
+                ? 'bg-green-600/20 text-green-400 border border-green-500/30 shadow-sm shadow-green-500/10 active-glow-green heartbeat'
                 : 'bg-white/[0.04] text-gray-500 border border-white/[0.04] hover:text-gray-300 hover:border-white/[0.08]'
             }`}
           >

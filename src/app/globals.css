@@ -304,6 +304,23 @@ body {
     0 0 0 1px rgba(0, 0, 0, 0.3);
 }
 
+/* Glass noise overlay - subtle SVG noise pattern for glass panels */
+.glass-noise-overlay {
+  position: relative;
+}
+
+.glass-noise-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* Panel glass with amber edge glow */
 .glass-panel {
   background: rgba(3, 3, 8, 0.82);
@@ -312,6 +329,18 @@ body {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.03),
     0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.glass-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Metric card with inner depth */
@@ -838,11 +867,12 @@ body {
   padding-left: calc(0.5rem - 2px);
 }
 
-/* Section gradient separator enhanced */
+/* Section gradient separator enhanced with traveling light dot */
 .section-divider-enhanced {
   position: relative;
   height: 1px;
   background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(255, 255, 255, 0.04) 40%, rgba(255, 255, 255, 0.04) 60%, rgba(245, 158, 11, 0.15));
+  overflow: hidden;
 }
 
 .section-divider-enhanced::before {
@@ -854,6 +884,37 @@ body {
   height: 3px;
   background: linear-gradient(90deg, rgba(245, 158, 11, 0.3), transparent);
   border-radius: 2px;
+}
+
+/* Traveling light dot animation */
+@keyframes traveling-light-dot {
+  0% {
+    left: -10%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: 110%;
+    opacity: 0;
+  }
+}
+
+.section-divider-enhanced::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -10%;
+  width: 20px;
+  height: 5px;
+  background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.8), rgba(245, 158, 11, 0.4) 40%, transparent 70%);
+  border-radius: 50%;
+  animation: traveling-light-dot 3s ease-in-out infinite;
+  pointer-events: none;
 }
 
 /* AI Gauge glow effect */
@@ -1284,4 +1345,33 @@ body {
 
 .screenshot-flash {
   animation: screenshot-flash 0.4s ease-out forwards;
+}
+
+/* ─── CHROME DNA Task 14-a: Styling Details ─── */
+
+/* Heartbeat animation for LIVE button */
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.15), inset 0 1px 0 rgba(34, 197, 94, 0.1);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 14px rgba(34, 197, 94, 0.25), inset 0 1px 0 rgba(34, 197, 94, 0.15);
+  }
+}
+
+.heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+/* Price tick scale pulse animation */
+@keyframes price-tick-pulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.price-tick-animate {
+  animation: price-tick-pulse 0.3s ease-out;
 }

@@ -437,3 +437,275 @@ Stage Summary:
 - Keyboard shortcut [S] for screenshot (custom event dispatch pattern)
 - Help Modal updated with Screenshot Export shortcut entry
 - Shortcut hint text updated to include [S] Screenshot
+
+---
+Task ID: 14-a
+Agent: Styling Details Agent
+Task: Improve styling with more details across the entire application (6 enhancements)
+
+Work Log:
+- Read worklog.md to understand existing project state and prior work
+- Read EnergyHelix.tsx, Scene.tsx, Header.tsx, globals.css, helixMath.ts to understand existing patterns
+- Implemented 6 styling enhancements across 4 files:
+
+1. **AmbientGlowRing** (EnergyHelix.tsx - new component):
+   - Large semi-transparent torus at the center of the DNA helix (Y = mid-height)
+   - Amber color (#FFD700) with very low opacity (0.05-0.08, pulsing via sin wave)
+   - Slowly rotates (rotation.z = time * 0.05) and subtle tilt oscillation (rotation.x)
+   - Radius = HELIX_RADIUS + 1.5 = 3.7, tube radius 0.15
+   - Uses meshBasicMaterial with depthWrite=false and DoubleSide for proper transparency
+   - Added to main EnergyHelix component's group
+
+2. **DataStreamEffect** (Scene.tsx - new component):
+   - 30 small instanced particles that travel along the helix path from bottom to top
+   - Each particle has a progress (0..1), speed (0.02-0.05), and spiral offset
+   - When a particle reaches the top (progress >= 1), it resets to the bottom
+   - Uses amber/gold emissive material (emissive: #FFD700, intensity 0.9)
+   - Very small scale (0.025) per particle
+   - useFrame animates positions each frame, computing helix trajectory from candle data
+   - Added inside the Scene's Suspense group
+
+3. **Live Price Change Animation** (Header.tsx):
+   - Tick direction indicator dot: small circle that flashes green (up tick) or red (down tick)
+   - Derived from comparing last two candles' close prices (useMemo, no refs/effects)
+   - Tick direction arrow: tiny ▲/▼ indicator showing last tick direction
+   - Price element has `price-tick-animate` class for scale pulse on price change
+   - Key-based re-rendering triggers CSS animation on price change
+
+4. **Noise Texture Overlay on Glass Panels** (globals.css):
+   - Added `.glass-noise-overlay` class with CSS pseudo-element using SVG noise pattern
+   - SVG feTurbulence filter: baseFrequency=0.9, numOctaves=4
+   - Very faint overlay (opacity 0.018) on glass panels
+   - Applied noise overlay to `.glass-panel` class via ::after pseudo-element
+   - z-index: 1, pointer-events: none so it doesn't interfere with interactions
+
+5. **Heartbeat Animation for LIVE Button** (globals.css + Header.tsx):
+   - @keyframes heartbeat: scale(1) → scale(1.05) → scale(1) with subtle box-shadow pulse
+   - Green glow box-shadow that pulses between 8px and 14px spread
+   - Applied `.heartbeat` class to the Live toggle button when isLive is true
+   - 1.5s cycle, ease-in-out infinite
+
+6. **Animated Gradient Section Separators** (globals.css):
+   - Enhanced `.section-divider-enhanced` with traveling light dot animation
+   - @keyframes traveling-light-dot: dot slides from -10% to 110% width over 3 seconds
+   - Amber glow dot using radial-gradient (rgba(255,215,0,0.8) → transparent)
+   - Dot fades in at 10% and fades out at 90% of the animation
+   - Added overflow:hidden to prevent dot from showing outside divider
+   - Retained existing ::before accent bar, added ::after traveling dot
+
+- All changes use 'use client' directive where needed
+- All follow existing code patterns (Zustand stores, React hooks, Three.js/R3F conventions)
+- Color palette strictly amber/gold/green/red (no indigo/blue)
+- `bun run lint` passes with zero errors
+- Dev server running successfully
+
+Stage Summary:
+- New 3D component: AmbientGlowRing (amber torus at helix center with pulsing opacity and slow rotation)
+- New 3D component: DataStreamEffect (30 particles traveling along helix path bottom-to-top)
+- Enhanced Header: tick direction dot, tick direction arrow, scale pulse on price change
+- New CSS: glass-noise-overlay (SVG noise texture for glass panels)
+- New CSS: heartbeat animation (LIVE button pulse with scale + shadow)
+- New CSS: price-tick-animate (price scale pulse on tick change)
+- Enhanced CSS: section-divider-enhanced (traveling amber light dot animation)
+- 4 files modified: EnergyHelix.tsx, Scene.tsx, Header.tsx, globals.css
+
+---
+Task ID: 14-b
+Agent: Feature Addition Agent
+Task: Add Risk Calculator and Performance Heatmap Calendar components to RightPanel
+
+Work Log:
+- Read worklog.md to understand existing project state and prior work (13+ task entries)
+- Read RightPanel.tsx (1161 lines), marketStore.ts, energy.ts, market.ts, TradeSimulation.tsx to understand patterns and data structures
+- Identified insertion point: AFTER Energy Metrics section, BEFORE Correlation Matrix in RightPanel
+- Created RiskCalculator component (`src/components/panels/RiskCalculator.tsx`):
+  1. **Position Sizing Inputs**:
+     - Account Balance: default $100,000 (number input, formatted with commas)
+     - Risk Per Trade: default 2% (slider from 0.5% to 5%, step 0.5%)
+     - Stop Loss (ATR Multiple): default 2x (buttons: 1x, 1.5x, 2x, 2.5x, 3x)
+  2. **Calculated Results** (auto-computed from candle data):
+     - Current ATR: 14-period ATR from candles
+     - Dollar Risk: Account Balance × Risk %
+     - Stop Distance: ATR × Multiple (in price units)
+     - Position Size (contracts): Dollar Risk / (Stop Distance × contract multiplier), rounded down
+     - Contract Value: Position Size × multiplier × current price
+     - Each result displayed in styled metric-card-enhanced cards
+  3. **Quick Reference**:
+     - Contract multiplier per symbol (CL=1000, NG=10000, RB=420, HO=420)
+     - Tick size and tick value per symbol
+     - Margin requirement estimate (mock: ~$5,500-8,500 based on symbol)
+  4. **Visual**:
+     - Amber/gold/green/red color palette (no indigo/blue)
+     - "CALCULATED" badge similar to TradeSimulation's "SIMULATED" badge
+     - Collapsible with "Risk Calculator" header and chevron toggle
+     - Custom slider styling with amber thumb and glow effect
+     - ATR multiple buttons with amber active state
+  5. **Integration**:
+     - Imported and added to RightPanel AFTER Energy Metrics, BEFORE Correlation Matrix
+     - Added section-divider-enhanced before it
+
+- Created PerformanceHeatmap component (`src/components/panels/PerformanceHeatmap.tsx`):
+  1. **Heatmap Grid**:
+     - 7 rows (Sun-Sat) × 13 columns (last 13 weeks)
+     - Each cell is a 12×12 rounded square
+     - Color intensity based on daily P&L (close - open per candle):
+       - Loss: red shades (darker = bigger loss)
+       - Gain: green shades (darker = bigger gain)
+       - No data: very dark gray (rgba(255,255,255,0.03))
+     - Normalized by max absolute daily change
+  2. **Summary Stats** (below the grid):
+     - Best Day / Worst Day values
+     - Average Daily Change
+     - Win Rate (% of positive days)
+     - Current Streak (consecutive up/down days)
+  3. **Month Labels** (above the grid):
+     - Abbreviated month names at first week of each month boundary
+  4. **Day Labels** (left side):
+     - M, W, F for Monday, Wednesday, Friday rows
+  5. **Hover Tooltip**:
+     - Shows date and P&L value for hovered cell
+  6. **Visual**:
+     - Amber/gold/green/red color palette
+     - glass-card-enhanced container
+     - Color legend bar (Loss → Gain gradient)
+     - Collapsible with "Performance Heatmap" header and chevron toggle
+     - metric-card-enhanced for summary stat cards
+  7. **Integration**:
+     - Imported and added to RightPanel AFTER Risk Calculator, BEFORE Correlation Matrix
+     - Added section-divider-enhanced before it
+
+- Modified RightPanel.tsx:
+  - Added imports for RiskCalculator and PerformanceHeatmap
+  - Inserted RiskCalculator with section-divider-enhanced after Energy Metrics
+  - Inserted PerformanceHeatmap with section-divider-enhanced after RiskCalculator
+  - All existing functionality preserved (no modifications to existing code)
+
+- Color palette strictly amber/gold/green/red (no indigo/blue)
+- All components use 'use client' directive
+- Use Zustand stores (useMarketStore) for data access
+- Follow existing code patterns (collapsible headers, metric-card-enhanced, glass-card-enhanced)
+- `bun run lint` passes with zero errors
+
+Stage Summary:
+- New component: RiskCalculator.tsx - Professional position sizing calculator for energy futures traders
+  - Account balance input with comma formatting
+  - Risk % slider (0.5-5%) with custom amber styling
+  - ATR multiple buttons (1x-3x) with active state
+  - Auto-calculated: dollar risk, stop distance, position size, contract value
+  - Contract specs quick reference (multiplier, tick size, tick value, margin estimate)
+  - "CALCULATED" badge and collapsible panel
+- New component: PerformanceHeatmap.tsx - GitHub-style contribution heatmap for daily P&L
+  - 7×13 grid (days × weeks) with color-coded cells
+  - Normalized green/red intensity based on P&L magnitude
+  - Month labels above grid, day labels (M, W, F) on left
+  - Hover tooltip showing date and P&L
+  - Summary stats: best/worst day, avg change, win rate, current streak
+  - Collapsible panel with glass-card-enhanced container
+- RightPanel integration: Both components placed between Energy Metrics and Correlation Matrix
+- All existing functionality preserved - only additions made
+- Lint passes with zero errors
+
+---
+Task ID: 15
+Agent: Main Orchestrator (Cron Review Round 3)
+Task: QA assessment, bug fixes, mandatory styling improvements, mandatory feature additions, worklog update
+
+Work Log:
+- Reviewed worklog.md comprehensively - 14+ task entries with extensive project history
+- QA assessment: Dev server responds with 200, lint passes with zero errors
+- No bugs found - project is in stable state
+- Critical symbol-switching bug confirmed fixed from previous round
+- Dev server restarted and verified functional
+- Dispatched 2 parallel subagents:
+  - Task 14-a: 6 styling enhancements (AmbientGlowRing, DataStreamEffect, price tick animation, noise texture, heartbeat, traveling separator)
+  - Task 14-b: 2 new features (Risk Calculator, Performance Heatmap Calendar)
+- Verified all changes: lint passes, dev server returns 200, new files created and integrated
+
+## Current Project Status Description/Assessment
+
+CHROME DNA Energy Edition is a comprehensive 3D market visualization terminal for energy futures (CL/NG/RB/HO). The application features a real-time DNA double-helix metaphor where buyer and seller forces spiral around a shared axis, with Y=price, Z=time, and node scale=volume.
+
+**Technical Stack:**
+- Next.js 16 + App Router + TypeScript 5
+- React Three Fiber + Drei + @react-three/postprocessing (Bloom, ChromaticAberration, Vignette)
+- Zustand stores (marketStore, uiStore, tradeStore)
+- Tailwind CSS 4 + shadcn/ui + 1400+ lines custom CSS
+- Framer Motion for panel animations
+- Prisma ORM available but not yet needed (mock data)
+
+**3D Scene Features (7+ visual layers):**
+- DNA double-helix with TubeGeometry backbone curves (buyer=gold, seller=copper)
+- Holographic grid floor with GLSL radial glow shader
+- Glowing selection rings with vertical beams
+- Price level glow planes (current/high/low)
+- Particle trail effect following last helix nodes
+- Data stream particles traveling along helix path
+- Ambient glow ring around helix center
+- Volume heatmap (torus rings scaled by volume)
+- EIA day markers (glowing rings on Wednesdays)
+- Weather impact particles
+- Fibonacci level overlays
+- 200+ floating ambient particles + starfield
+
+**UI Panels (17+ panels/overlays):**
+- Header: Symbol selector, live price + sparkline, BID/ASK spread, EIA countdown, AI score badge, Live toggle
+- Left Panel: Timeframe, Decomposition (D1-D6), Layer toggles (7 layers), Market Pulse, Controls, Price Alerts, Trade Simulation, Scene Info
+- Right Panel: Candle Details, AI Composite Score (7 components), Technical Indicators (RSI/MACD/Bollinger/ATR), Order Flow, Risk Calculator, Performance Heatmap Calendar, Watchlist, Market Regime, Correlation Matrix
+- Bottom Panel: Volume Profile with POC/VAH/VAL, Delta Distribution, Cumulative Delta Trend
+- Additional: EIA Report Overlay, Help Modal, Screenshot Export, Notification Center, Live Ticker, Playback Bar
+
+**Styling Quality:**
+- 1400+ lines of premium CSS with micro-animations
+- Glass morphism panels with noise texture overlay
+- Heartbeat animation on LIVE button
+- Traveling amber light dot in section separators
+- Price tick change animation with direction indicator
+- 20+ custom CSS animation classes
+- Amber/gold/green/red color palette (no indigo/blue)
+
+**Stability:** Lint passes with zero errors, dev server returns 200, no compilation errors, symbol switching works correctly.
+
+## Current Goals/Completed Modifications/Verification Results
+
+**Goals for this round:**
+1. ✅ Assess project status and perform QA
+2. ✅ Fix any bugs (none found - project stable)
+3. ✅ Mandatory: Improve styling with more details
+4. ✅ Mandatory: Add more features and functionality
+
+**Completed Modifications:**
+
+*Styling Improvements (Task 14-a):*
+- AmbientGlowRing: Large amber torus at helix center with pulsing opacity and slow rotation
+- DataStreamEffect: 30 particles traveling along helix path from bottom to top
+- Live Price Tick Animation: Direction indicator dot + arrow + scale pulse on price change
+- Noise Texture Overlay: SVG feTurbulence noise pattern on glass panels (opacity 0.018)
+- Heartbeat Animation: LIVE button scale pulse (1→1.05→1) with green box-shadow glow
+- Traveling Separator Dot: Amber light dot animating left-to-right in section dividers
+
+*New Features (Task 14-b):*
+- Risk Calculator: Position sizing calculator with account balance, risk % slider, ATR multiple buttons, auto-calculated dollar risk/stop distance/position size/contract value, contract specs quick reference
+- Performance Heatmap Calendar: GitHub-style 7×13 grid with color-coded daily P&L cells, month labels, day labels, hover tooltips, summary stats (best/worst day, win rate, current streak)
+
+*Verification Results:*
+- `bun run lint`: Passes with zero errors
+- Dev server: Returns HTTP 200
+- No compilation errors
+- All existing functionality preserved
+
+## Unresolved Issues/Risks and Priority Recommendations for Next Phase
+
+**Unresolved Issues:**
+1. Dev server unstable in sandbox under combined browser+server load (environment limitation, not code issue)
+2. Mock data only - real data integration needed for production
+3. Mobile responsive view needs improvement (panels too wide for small screens)
+4. No WebSocket integration for real-time market data feeds
+
+**Priority Recommendations for Next Phase:**
+1. **Real Market Data Integration**: Connect to CME Group, EIA API, or WebSocket feeds for live data
+2. **Mobile Responsive View**: Implement 2D fallback for small screens, collapsible panels
+3. **Performance Optimization**: Lazy-load heavy components (3D scene, panels), reduce re-renders with React.memo
+4. **AI Pattern Recognition**: Add chart pattern detection overlay (head & shoulders, double top/bottom, flags)
+5. **Multi-timeframe Comparison**: Side-by-side or overlay view of different timeframes
+6. **Export/Reporting**: PDF report generation with screenshot + metrics summary
+7. **Geographic Supply Chain Overlay**: 3D map layer showing production/transport routes

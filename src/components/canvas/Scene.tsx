@@ -257,6 +257,92 @@ function HelixParticleTrail() {
   );
 }
 
+// Data Stream Effect - 30 particles traveling along the helix path from bottom to top
+function DataStreamEffect() {
+  const PARTICLE_COUNT = 30;
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummyRef = useRef(new THREE.Object3D());
+
+  const candles = useMarketStore((s) => s.candles);
+  const symbol = useMarketStore((s) => s.symbol);
+  const info = ENERGY_SYMBOLS[symbol];
+
+  // Each particle has a progress (0..1) along the helix, speed, and spiral offset
+  const particleData = useMemo(() => {
+    const data: { progress: number; speed: number; spiralOffset: number }[] = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      data.push({
+        progress: Math.random(), // start at random position along helix
+        speed: 0.02 + Math.random() * 0.03, // speed along helix
+        spiralOffset: Math.random() * Math.PI * 2, // random phase offset on spiral
+      });
+    }
+    return data;
+  }, []);
+
+  // Compute helix parameters from candles for position calculation
+  const helixParams = useMemo(() => {
+    if (candles.length === 0) return null;
+    const prices = candles.map((c) => c.close);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice || 1;
+    const targetZRange = 3;
+    const totalHeight = candles.length * 0.22; // HEIGHT_PER_CANDLE
+    const radius = 2.2; // HELIX_RADIUS
+    const turnsPerCandle = 0.1;
+
+    return { minPrice, priceRange, targetZRange, totalHeight, radius, turnsPerCandle, candleCount: candles.length };
+  }, [candles, symbol]);
+
+  useFrame((_, delta) => {
+    if (!meshRef.current || !helixParams) return;
+    const dummy = dummyRef.current;
+    const { minPrice, priceRange, targetZRange, totalHeight, radius, turnsPerCandle, candleCount } = helixParams;
+
+    particleData.forEach((p, i) => {
+      // Advance progress
+      p.progress += p.speed * delta;
+      if (p.progress >= 1) {
+        p.progress -= 1; // reset to bottom
+      }
+
+      // Map progress to helix position
+      const candleIndex = p.progress * (candleCount - 1);
+      const y = candleIndex * 0.22;
+      const angle = candleIndex * turnsPerCandle * Math.PI * 2 + p.spiralOffset;
+
+      // Get approximate Z from price (use a sin-based approximation since we don't have exact candle)
+      const approxPrice = minPrice + (0.5 + Math.sin(p.progress * Math.PI * 2) * 0.3) * priceRange;
+      const z = ((approxPrice - minPrice) / priceRange) * targetZRange - targetZRange / 2;
+
+      const x = Math.cos(angle) * radius;
+
+      dummy.position.set(x, y, z);
+      dummy.scale.setScalar(0.025);
+      dummy.updateMatrix();
+      meshRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  if (!helixParams) return null;
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, PARTICLE_COUNT]}>
+      <sphereGeometry args={[1, 6, 6]} />
+      <meshStandardMaterial
+        color={info.buyerColor}
+        emissive="#FFD700"
+        emissiveIntensity={0.9}
+        transparent
+        opacity={0.7}
+      />
+    </instancedMesh>
+  );
+}
+
 function AxisLabels() {
   return (
     <group>
@@ -341,6 +427,7 @@ export function Scene() {
         <AxisLabels />
         <FloatingParticles />
         <HelixParticleTrail />
+        <DataStreamEffect />
 
         <Environment preset="night" />
         <ContactShadows

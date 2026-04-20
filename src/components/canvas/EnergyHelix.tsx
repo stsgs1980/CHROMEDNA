@@ -662,6 +662,47 @@ function WeatherParticles() {
   );
 }
 
+// Ambient Glow Ring - large semi-transparent torus at helix center
+function AmbientGlowRing() {
+  const candles = useMarketStore((s) => s.candles);
+  const materialRef = useRef<THREE.MeshBasicMaterial>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  const midHeight = useMemo(() => {
+    if (candles.length === 0) return 0;
+    return (candles.length * HEIGHT_PER_CANDLE) / 2;
+  }, [candles]);
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+    if (materialRef.current) {
+      // Pulse opacity between 0.05 and 0.08
+      materialRef.current.opacity = 0.06 + Math.sin(time * 0.5) * 0.02;
+    }
+    if (meshRef.current) {
+      // Slow rotation
+      meshRef.current.rotation.z = time * 0.05;
+      meshRef.current.rotation.x = Math.sin(time * 0.03) * 0.1;
+    }
+  });
+
+  const ringRadius = HELIX_RADIUS + 1.5;
+
+  return (
+    <mesh ref={meshRef} position={[0, midHeight, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      <torusGeometry args={[ringRadius, 0.15, 8, 64]} />
+      <meshBasicMaterial
+        ref={materialRef}
+        color="#FFD700"
+        transparent
+        opacity={0.06}
+        depthWrite={false}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
 // 3D Volume Heatmap Layer - cylindrical ring segments showing volume intensity around the DNA helix
 function VolumeHeatmap() {
   const showVolumeProfile = useUIStore((s) => s.showVolumeProfile);
@@ -768,6 +809,7 @@ export function EnergyHelix() {
       <EIADayMarkers />
       <WeatherParticles />
       <VolumeHeatmap />
+      <AmbientGlowRing />
     </group>
   );
 }
