@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useMarketStore } from '@/stores/marketStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -11,6 +11,8 @@ import { RightPanel } from '@/components/panels/RightPanel';
 import { BottomPanel } from '@/components/panels/BottomPanel';
 import { PlaybackBar } from '@/components/panels/PlaybackBar';
 import { EIAReportOverlay } from '@/components/panels/EIAReportOverlay';
+import { HelpModal } from '@/components/panels/HelpModal';
+import { LiveTickSimulator } from '@/components/canvas/LiveTickSimulator';
 import { generateEnergyData, generateVolumeProfile, generateOrderFlow } from '@/lib/energyGenerators';
 import { calculateCompositeScore } from '@/lib/aiScoring';
 import { PanelLeftOpen, PanelRightOpen, ChevronUp } from 'lucide-react';
@@ -75,6 +77,7 @@ function KeyboardShortcuts() {
   const setSymbol = useMarketStore((s) => s.setSymbol);
   const showFibonacci = useUIStore((s) => s.showFibonacci);
   const setShowFibonacci = useUIStore((s) => s.setShowFibonacci);
+  const toggleHelp = useUIStore((s) => s.toggleHelp);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -94,15 +97,72 @@ function KeyboardShortcuts() {
         case 'p': togglePlaybackBar(); break;
         case 'r': setAutoRotate(!autoRotate); break;
         case 'l': setLive(!isLive); break;
-        case '?': break; // Could show a help modal in future
+        case '?': toggleHelp(); break;
       }
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [toggleLeftPanel, toggleRightPanel, toggleBottomPanel, togglePlaybackBar, toggleEIAReport, setAutoRotate, autoRotate, setLive, isLive, setSymbol, showFibonacci, setShowFibonacci]);
+  }, [toggleLeftPanel, toggleRightPanel, toggleBottomPanel, togglePlaybackBar, toggleEIAReport, setAutoRotate, autoRotate, setLive, isLive, setSymbol, showFibonacci, setShowFibonacci, toggleHelp]);
 
   return null;
+}
+
+function Footer() {
+  const [time, setTime] = useState('');
+  const isLive = useMarketStore((s) => s.isLive);
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setTime(now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <footer className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
+      {/* Gradient top border line */}
+      <div className="h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
+      <div className="bg-gray-950/80 backdrop-blur-md flex items-center justify-between px-4" style={{ height: '24px' }}>
+        {/* Left: Version */}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-bold tracking-wider" style={{
+            background: 'linear-gradient(135deg, #f59e0b, #fbbf24, #f59e0b)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>
+            CHROME DNA v0.5
+          </span>
+        </div>
+
+        {/* Center: System status indicators */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <div className="status-dot status-dot-green" />
+            <span className="text-[9px] text-gray-500">3D Engine</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className={`status-dot status-dot-amber ${isLive ? 'animate-pulse' : ''}`} />
+            <span className="text-[9px] text-gray-500">Data Feed</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="status-dot status-dot-green" />
+            <span className="text-[9px] text-gray-500">AI Engine</span>
+          </div>
+        </div>
+
+        {/* Right: Mock Data label + time */}
+        <div className="flex items-center gap-3">
+          <span className="helix-status-badge">Mock Data</span>
+          <span className="text-[9px] text-gray-500 tabular-nums font-mono">{time}</span>
+        </div>
+      </div>
+    </footer>
+  );
 }
 
 export default function Home() {
@@ -121,6 +181,9 @@ export default function Home() {
     <div className="fixed inset-0 bg-[#030308] overflow-hidden">
       {/* Data Loader (invisible) */}
       <DataLoader />
+
+      {/* Live Tick Simulator (invisible) */}
+      <LiveTickSimulator />
 
       {/* Keyboard Shortcuts (invisible) */}
       <KeyboardShortcuts />
@@ -207,13 +270,16 @@ export default function Home() {
         {/* Keyboard shortcut hint */}
         <div className="pointer-events-auto fixed top-14 right-3 z-[60]">
           <div className="text-[8px] text-gray-700/50 tracking-wider font-mono">
-            [1-4] Symbol · [E] EIA · [P] Play · [R] Rotate · [F] Fib
+            [1-4] Symbol · [E] EIA · [P] Play · [R] Rotate · [F] Fib · [?] Help
           </div>
         </div>
       </div>
 
       {/* EIA Report Overlay */}
       <EIAReportOverlay />
+
+      {/* Help Modal */}
+      <HelpModal />
 
       {/* Initial Loading Overlay - only shows on first load */}
       <AnimatePresence>
@@ -267,13 +333,7 @@ export default function Home() {
       </AnimatePresence>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
-        <div className="flex items-center justify-center py-1">
-          <div className="footer-gradient-text text-[9px] tracking-widest font-medium">
-            CHROME DNA v0.4 · Energy Futures Terminal · Mock Data
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

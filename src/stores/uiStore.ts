@@ -24,6 +24,9 @@ interface UIState {
   // Notification Center
   showNotifications: boolean;
 
+  // Help Modal
+  showHelp: boolean;
+
   // 3D Controls
   autoRotate: boolean;
   cameraTransition: boolean;
@@ -42,6 +45,7 @@ interface UIState {
   togglePlaybackBar: () => void;
   toggleEIAReport: () => void;
   toggleNotifications: () => void;
+  toggleHelp: () => void;
   setAutoRotate: (v: boolean) => void;
   setCameraTransition: (v: boolean) => void;
 }
@@ -65,6 +69,8 @@ export const useUIStore = create<UIState>((set) => ({
 
   showNotifications: false,
 
+  showHelp: false,
+
   autoRotate: true,
   cameraTransition: false,
 
@@ -81,6 +87,7 @@ export const useUIStore = create<UIState>((set) => ({
   togglePlaybackBar: () => set((s) => ({ showPlaybackBar: !s.showPlaybackBar })),
   toggleEIAReport: () => set((s) => ({ showEIAReport: !s.showEIAReport })),
   toggleNotifications: () => set((s) => ({ showNotifications: !s.showNotifications })),
+  toggleHelp: () => set((s) => ({ showHelp: !s.showHelp })),
   setAutoRotate: (autoRotate) => set({ autoRotate }),
   setCameraTransition: (cameraTransition) => set({ cameraTransition }),
 }));

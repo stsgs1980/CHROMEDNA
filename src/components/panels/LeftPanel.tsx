@@ -148,6 +148,12 @@ export function LeftPanel() {
   const setAutoRotate = useUIStore((s) => s.setAutoRotate);
   const showPlaybackBar = useUIStore((s) => s.showPlaybackBar);
   const togglePlaybackBar = useUIStore((s) => s.togglePlaybackBar);
+  const candles = useMarketStore((s) => s.candles);
+
+  const activeLayerCount = [
+    showBuyers, showSellers, showConnections, showVolumeProfile,
+    showFibonacci, showEIALayer, showWeatherLayer,
+  ].filter(Boolean).length;
 
   return (
     <motion.aside
@@ -298,6 +304,20 @@ export function LeftPanel() {
               onChange={togglePlaybackBar}
               color="#F59E0B"
             />
+          </div>
+
+          <div className="section-divider-enhanced" />
+
+          {/* Scene Info */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400 glow-dot-amber" />
+              <span className="text-[9px] font-semibold text-gray-600 uppercase tracking-wider">Scene Info</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-gray-600">Nodes: <span className="text-gray-400 tabular-nums">{candles.length}</span></span>
+              <span className="text-[9px] text-gray-600">Layers: <span className="text-amber-400/70 tabular-nums">{activeLayerCount}</span> active</span>
+            </div>
           </div>
 
           {/* Bottom padding */}

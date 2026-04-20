@@ -6,7 +6,7 @@ import { Instances, Instance, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useMarketStore } from '@/stores/marketStore';
 import { useUIStore } from '@/stores/uiStore';
-import { generateHelixData } from '@/lib/helixMath';
+import { generateHelixData, generateSpiralCurve } from '@/lib/helixMath';
 import { ENERGY_SYMBOLS } from '@/types/energy';
 
 const HEIGHT_PER_CANDLE = 0.22;
@@ -101,70 +101,62 @@ function SellerNodes() {
   );
 }
 
-// Spiral backbone - tube-like rendering using small spheres
+// Spiral backbone - smooth tube geometry using CatmullRomCurve3
 function SpiralBackbone() {
   const candles = useMarketStore((s) => s.candles);
   const symbol = useMarketStore((s) => s.symbol);
   const info = ENERGY_SYMBOLS[symbol];
 
-  const backbonePoints = useMemo(() => {
-    if (candles.length < 2) return { buyers: [] as { position: [number, number, number]; color: string; scale: number }[], sellers: [] as { position: [number, number, number]; color: string; scale: number }[] };
+  const { buyerCurve, sellerCurve } = useMemo(
+    () => generateSpiralCurve(candles),
+    [candles]
+  );
 
-    const prices = candles.map(c => c.close);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const priceRange = maxPrice - minPrice || 1;
-    const targetZRange = 3;
-    const radius = 2.2;
-    const turnsPerCandle = 0.1;
-    const heightPerCandle = 0.22;
+  const buyerTubeCurve = useMemo(() => {
+    if (buyerCurve.length < 2) return null;
+    return new THREE.CatmullRomCurve3(
+      buyerCurve.map((p) => new THREE.Vector3(p[0], p[1], p[2]))
+    );
+  }, [buyerCurve]);
 
-    const buyerPoints: { position: [number, number, number]; color: string; scale: number }[] = [];
-    const sellerPoints: { position: [number, number, number]; color: string; scale: number }[] = [];
+  const sellerTubeCurve = useMemo(() => {
+    if (sellerCurve.length < 2) return null;
+    return new THREE.CatmullRomCurve3(
+      sellerCurve.map((p) => new THREE.Vector3(p[0], p[1], p[2]))
+    );
+  }, [sellerCurve]);
 
-    const substeps = 3;
-    for (let i = 0; i < candles.length; i++) {
-      for (let s = 0; s < substeps; s++) {
-        const t = i + s / substeps;
-        const angle = t * turnsPerCandle * Math.PI * 2;
-        const y = t * heightPerCandle;
-        const z = ((candles[i].close - minPrice) / priceRange) * targetZRange - targetZRange / 2;
+  if (!buyerTubeCurve || !sellerTubeCurve) return null;
 
-        buyerPoints.push({
-          position: [Math.cos(angle) * radius, y, z + 0.15],
-          color: info.buyerColor,
-          scale: 0.06,
-        });
-        sellerPoints.push({
-          position: [Math.cos(angle + Math.PI) * radius, y, z - 0.15],
-          color: info.sellerColor,
-          scale: 0.06,
-        });
-      }
-    }
-
-    return { buyers: buyerPoints, sellers: sellerPoints };
-  }, [candles, symbol, info]);
-
-  if (backbonePoints.buyers.length === 0) return null;
+  const tubularSegments = candles.length * 3;
+  const tubeRadius = 0.03;
+  const radialSegments = 8;
 
   return (
     <group>
-      <Instances limit={2000}>
-        <sphereGeometry args={[1, 6, 6]} />
-        <meshBasicMaterial transparent opacity={0.7} />
-        {backbonePoints.buyers.map((point, i) => (
-          <Instance key={`bb-${i}`} position={point.position} scale={point.scale} color={point.color} />
-        ))}
-      </Instances>
-      
-      <Instances limit={2000}>
-        <sphereGeometry args={[1, 6, 6]} />
-        <meshBasicMaterial transparent opacity={0.7} />
-        {backbonePoints.sellers.map((point, i) => (
-          <Instance key={`sb-${i}`} position={point.position} scale={point.scale} color={point.color} />
-        ))}
-      </Instances>
+      {/* Buyer spiral tube - gold/amber metallic */}
+      <mesh>
+        <tubeGeometry args={[buyerTubeCurve, tubularSegments, tubeRadius, radialSegments, false]} />
+        <meshStandardMaterial
+          color={info.buyerColor}
+          metalness={0.9}
+          roughness={0.15}
+          emissive={info.buyerColor}
+          emissiveIntensity={0.25}
+        />
+      </mesh>
+
+      {/* Seller spiral tube - copper/red metallic */}
+      <mesh>
+        <tubeGeometry args={[sellerTubeCurve, tubularSegments, tubeRadius, radialSegments, false]} />
+        <meshStandardMaterial
+          color={info.sellerColor}
+          metalness={0.9}
+          roughness={0.15}
+          emissive={info.sellerColor}
+          emissiveIntensity={0.25}
+        />
+      </mesh>
     </group>
   );
 }

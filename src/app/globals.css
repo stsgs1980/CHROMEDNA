@@ -920,3 +920,50 @@ body {
 .delta-bar-negative {
   background: linear-gradient(to top, rgba(248, 113, 113, 0.2), rgba(248, 113, 113, 0.5));
 }
+
+/* ─── CHROME DNA Panel Scan Line & Additional Effects ─── */
+
+/* Scanning line effect for panels */
+@keyframes scan-line {
+  0% { top: 0%; }
+  100% { top: 100%; }
+}
+
+.panel-scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.04), rgba(245, 158, 11, 0.05), rgba(245, 158, 11, 0.04), transparent);
+  pointer-events: none;
+  z-index: 1;
+  animation: scan-line 8s linear infinite;
+  opacity: 0.8;
+}
+
+/* Helix status badge - small pill for footer */
+.helix-status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(251, 191, 36, 0.7);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: 9999px;
+  padding: 1px 6px;
+  line-height: 1.4;
+}
+
+/* Data refresh flash animation */
+@keyframes refresh-flash {
+  0% { background-color: rgba(245, 158, 11, 0.12); }
+  50% { background-color: rgba(74, 222, 128, 0.08); }
+  100% { background-color: transparent; }
+}
+
+.data-refresh-flash {
+  animation: refresh-flash 0.3s ease-out;
+}
