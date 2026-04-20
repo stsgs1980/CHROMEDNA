@@ -34,7 +34,7 @@ function SignalBadge({ signal }: { signal: SignalType }) {
 
 function MetricCard({ label, value, color = 'text-white', subtext }: { label: string; value: string; color?: string; subtext?: string }) {
   return (
-    <div className="bg-white/[0.03] rounded-md px-2.5 py-1.5 border border-white/[0.03] hover:border-white/[0.06] transition-colors">
+    <div className="metric-card rounded-md px-2.5 py-1.5">
       <div className="text-[9px] text-gray-500 uppercase tracking-wider">{label}</div>
       <div className={`text-sm font-semibold tabular-nums ${color}`}>{value}</div>
       {subtext && <div className="text-[9px] text-gray-600 tabular-nums">{subtext}</div>}
@@ -247,7 +247,7 @@ export function RightPanel() {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 300, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed right-0 top-14 bottom-0 w-[300px] z-40 bg-gray-950/90 backdrop-blur-xl border-l border-white/[0.06] overflow-hidden"
+          className="fixed right-0 top-14 bottom-0 w-[300px] z-40 glass-panel panel-edge-right panel-responsive-right overflow-hidden"
         >
           <ScrollArea className="h-full">
             <div className="p-4 space-y-4">
@@ -286,7 +286,7 @@ export function RightPanel() {
               {/* Mini Candle Chart */}
               <MiniCandleChart candles={last20Candles} />
 
-              <Separator className="bg-white/5" />
+              <div className="section-divider" />
 
               {/* AI Score with Gauge */}
               <div>
@@ -394,12 +394,12 @@ export function RightPanel() {
                 )}
               </div>
 
-              <Separator className="bg-white/5" />
+              <div className="section-divider" />
 
               {/* Order Flow Section */}
               <OrderFlowSection />
 
-              <Separator className="bg-white/5" />
+              <div className="section-divider" />
 
               {/* Energy Metrics */}
               <div>

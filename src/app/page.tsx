@@ -47,7 +47,7 @@ function DataLoader() {
     const store = useMarketStore.getState();
     
     // Generate all data for the current symbol
-    const candles = generateEnergyData(symbol, 200);
+    const candles = generateEnergyData(symbol, 80);
     const vp = generateVolumeProfile(candles);
     const ofData = generateOrderFlow(candles);
     const score = calculateCompositeScore(candles);
@@ -208,8 +208,8 @@ export default function Home() {
       {/* Footer */}
       <footer className="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
         <div className="flex items-center justify-center py-1">
-          <div className="text-[9px] text-gray-700 tracking-wider">
-            CHROME DNA v0.2 · Energy Futures Terminal · Mock Data
+          <div className="footer-gradient-text text-[9px] tracking-widest font-medium">
+            CHROME DNA v0.3 · Energy Futures Terminal · Mock Data
           </div>
         </div>
       </footer>

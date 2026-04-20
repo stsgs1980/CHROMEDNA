@@ -80,7 +80,7 @@ export function BottomPanel() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 220, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed bottom-0 left-0 right-0 z-40 bg-gray-950/90 backdrop-blur-xl border-t border-white/[0.06]"
+          className="fixed bottom-0 left-0 right-0 z-40 glass-panel panel-edge-bottom"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-1.5 border-b border-white/[0.04]">

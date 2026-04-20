@@ -1,191 +1,209 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, RotateCcw, SkipBack, SkipForward } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { Play, Pause, SkipBack, SkipForward, FastForward, Rewind, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { usePlaybackStore } from '@/stores/playbackStore';
 import { useMarketStore } from '@/stores/marketStore';
+import { useUIStore } from '@/stores/uiStore';
+import { generateEnergyData, generateVolumeProfile, generateOrderFlow } from '@/lib/energyGenerators';
+import { calculateCompositeScore } from '@/lib/aiScoring';
 
-const SPEEDS: { value: 0.5 | 1 | 2 | 4 | 8; label: string }[] = [
-  { value: 0.5, label: '0.5x' },
-  { value: 1, label: '1x' },
-  { value: 2, label: '2x' },
-  { value: 4, label: '4x' },
-  { value: 8, label: '8x' },
-];
+type PlaybackSpeed = 0.5 | 1 | 2 | 4 | 8;
 
 export function PlaybackBar() {
-  const isPlaying = usePlaybackStore((s) => s.isPlaying);
-  const speed = usePlaybackStore((s) => s.speed);
-  const currentIndex = usePlaybackStore((s) => s.currentIndex);
-  const maxIndex = usePlaybackStore((s) => s.maxIndex);
-  const setPlaying = usePlaybackStore((s) => s.setPlaying);
-  const setSpeed = usePlaybackStore((s) => s.setSpeed);
-  const setCurrentIndex = usePlaybackStore((s) => s.setCurrentIndex);
-  const setMaxIndex = usePlaybackStore((s) => s.setMaxIndex);
-  const reset = usePlaybackStore((s) => s.reset);
-
+  const symbol = useMarketStore((s) => s.symbol);
   const candles = useMarketStore((s) => s.candles);
-  const setCandles = useMarketStore((s) => s.setCandles);
+  const [playbackIndex, setPlaybackIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState<PlaybackSpeed>(1);
 
-  const allCandlesRef = useRef(candles);
+  // Generate full dataset for the current symbol
+  const fullData = useMemo(() => generateEnergyData(symbol, 200), [symbol]);
+  const totalCandles = fullData.length;
 
-  // Update max index when candles change
-  useEffect(() => {
-    if (candles.length > 0) {
-      allCandlesRef.current = candles;
-      setMaxIndex(candles.length - 1);
-    }
-  }, [candles, setMaxIndex]);
+  // Reset playback when symbol changes
+  const [prevSymbol, setPrevSymbol] = useState(symbol);
+  if (symbol !== prevSymbol) {
+    setPrevSymbol(symbol);
+    setPlaybackIndex(0);
+    setIsPlaying(false);
+  }
 
   // Playback timer
   useEffect(() => {
-    if (!isPlaying || maxIndex === 0) return;
+    if (isPlaying && playbackIndex < totalCandles) {
+      const id = setInterval(() => {
+        setPlaybackIndex((prev) => {
+          const next = prev + 1;
+          if (next >= totalCandles) {
+            setIsPlaying(false);
+            return totalCandles;
+          }
+          return next;
+        });
+      }, 1000 / speed);
+      return () => clearInterval(id);
+    }
+  }, [isPlaying, speed, totalCandles]);
 
-    const interval = setInterval(() => {
-      const next = usePlaybackStore.getState().currentIndex + 1;
-      if (next >= maxIndex) {
-        setPlaying(false);
-        setCurrentIndex(maxIndex);
-      } else {
-        setCurrentIndex(next);
-      }
-    }, 1000 / speed);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, speed, maxIndex, setPlaying, setCurrentIndex]);
-
-  // When playing, slice candles to show only up to current index
+  // Update visible candles based on playback index
   useEffect(() => {
-    if (isPlaying && allCandlesRef.current.length > 0) {
-      const sliced = allCandlesRef.current.slice(0, currentIndex + 1);
-      if (sliced.length > 0) {
-        setCandles(sliced);
-      }
-    }
-  }, [currentIndex, isPlaying, setCandles]);
+    const visibleCandles = fullData.slice(0, playbackIndex);
+    
+    if (visibleCandles.length > 0) {
+      const vp = generateVolumeProfile(visibleCandles);
+      const ofData = generateOrderFlow(visibleCandles);
+      const score = calculateCompositeScore(visibleCandles);
 
-  // When stopping playback, restore all candles
-  useEffect(() => {
-    if (!isPlaying && allCandlesRef.current.length > 0 && candles.length < allCandlesRef.current.length) {
-      setCandles(allCandlesRef.current);
+      useMarketStore.setState({
+        candles: visibleCandles,
+        volumeProfile: vp,
+        orderFlow: ofData,
+        aiScore: score,
+        selectedCandleIndex: null,
+      });
     }
-  }, [isPlaying, candles.length, setCandles]);
+  }, [playbackIndex, fullData]);
 
-  const handleSliderChange = (value: number[]) => {
-    const newIndex = value[0];
-    setCurrentIndex(newIndex);
-    if (allCandlesRef.current.length > 0) {
-      const sliced = allCandlesRef.current.slice(0, newIndex + 1);
-      setCandles(sliced);
+  const handlePlay = useCallback(() => {
+    if (playbackIndex >= totalCandles) {
+      setPlaybackIndex(0);
     }
-  };
+    setIsPlaying(!isPlaying);
+  }, [isPlaying, playbackIndex, totalCandles]);
 
-  const handleReset = () => {
-    reset();
-    if (allCandlesRef.current.length > 0) {
-      setCandles(allCandlesRef.current);
-    }
-  };
+  const handleReset = useCallback(() => {
+    setIsPlaying(false);
+    setPlaybackIndex(0);
+    const vp = generateVolumeProfile(fullData);
+    const ofData = generateOrderFlow(fullData);
+    const score = calculateCompositeScore(fullData);
+    useMarketStore.setState({
+      candles: fullData,
+      volumeProfile: vp,
+      orderFlow: ofData,
+      aiScore: score,
+      selectedCandleIndex: null,
+    });
+  }, [fullData]);
 
-  const progress = maxIndex > 0 ? (currentIndex / maxIndex) * 100 : 0;
+  const handleSliderChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const idx = parseInt(e.target.value, 10);
+    setPlaybackIndex(idx);
+    setIsPlaying(false);
+  }, []);
+
+  const cycleSpeed = useCallback(() => {
+    const speeds: PlaybackSpeed[] = [0.5, 1, 2, 4, 8];
+    const currentIdx = speeds.indexOf(speed);
+    const nextIdx = (currentIdx + 1) % speeds.length;
+    setSpeed(speeds[nextIdx]);
+  }, [speed]);
+
+  const progress = totalCandles > 0 ? (playbackIndex / totalCandles) * 100 : 0;
+
+  const currentCandle = candles[candles.length - 1];
+  const dateStr = currentCandle
+    ? new Date(currentCandle.time * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ y: -40, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: -40, opacity: 0 }}
-        className="fixed top-16 left-1/2 -translate-x-1/2 z-40 w-[560px] max-w-[90vw]"
-      >
-        <div className="bg-gray-950/90 backdrop-blur-xl border border-white/[0.06] rounded-xl px-4 py-2.5 shadow-2xl">
-          <div className="flex items-center gap-2">
-            {/* Reset */}
+    <motion.div
+      initial={{ y: 40, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 40, opacity: 0 }}
+      className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 w-[600px] max-w-[90vw]"
+    >
+      <div className="bg-gray-950/90 backdrop-blur-xl border border-white/[0.08] rounded-xl px-4 py-3 shadow-2xl shadow-black/40">
+        {/* Progress bar */}
+        <div className="relative mb-2">
+          <input
+            type="range"
+            min={0}
+            max={totalCandles}
+            value={playbackIndex}
+            onChange={handleSliderChange}
+            className="w-full h-1 bg-white/[0.06] rounded-full appearance-none cursor-pointer
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-400
+              [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:shadow-amber-400/30
+              [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-10"
+            style={{
+              background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${progress}%, rgba(255,255,255,0.06) ${progress}%, rgba(255,255,255,0.06) 100%)`,
+            }}
+          />
+        </div>
+
+        {/* Controls row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleReset}
-              className="text-gray-500 hover:text-white h-7 w-7 p-0"
+              className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-white/5"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </Button>
-
-            {/* Play/Pause */}
             <Button
-              variant={isPlaying ? 'default' : 'ghost'}
+              variant="ghost"
               size="sm"
-              onClick={() => setPlaying(!isPlaying)}
-              className={isPlaying
-                ? 'bg-amber-500 text-white hover:bg-amber-600 h-8 w-8 p-0 rounded-full'
-                : 'text-gray-400 hover:text-white h-8 w-8 p-0 rounded-full border border-white/10'
-              }
+              onClick={() => setPlaybackIndex(Math.max(0, playbackIndex - 10))}
+              className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-white/5"
+            >
+              <Rewind className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPlaybackIndex(Math.max(0, playbackIndex - 1))}
+              className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-white/5"
+            >
+              <SkipBack className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handlePlay}
+              className="h-8 w-8 p-0 text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 border border-amber-500/20"
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
             </Button>
-
-            {/* Skip buttons */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentIndex(Math.max(0, currentIndex - 10))}
-              className="text-gray-500 hover:text-white h-7 w-7 p-0"
+              onClick={() => setPlaybackIndex(Math.min(totalCandles, playbackIndex + 1))}
+              className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-white/5"
             >
-              <SkipBack className="w-3 h-3" />
+              <SkipForward className="w-3.5 h-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentIndex(Math.min(maxIndex, currentIndex + 10))}
-              className="text-gray-500 hover:text-white h-7 w-7 p-0"
+              onClick={() => setPlaybackIndex(Math.min(totalCandles, playbackIndex + 10))}
+              className="h-7 w-7 p-0 text-gray-500 hover:text-white hover:bg-white/5"
             >
-              <SkipForward className="w-3 h-3" />
+              <FastForward className="w-3.5 h-3.5" />
             </Button>
-
-            {/* Progress Slider */}
-            <div className="flex-1 flex items-center gap-2">
-              <Slider
-                value={[currentIndex]}
-                min={0}
-                max={maxIndex || 1}
-                step={1}
-                onValueChange={handleSliderChange}
-                className="flex-1"
-              />
-            </div>
-
-            {/* Counter */}
-            <span className="text-[10px] text-gray-500 tabular-nums min-w-[60px] text-right">
-              {currentIndex + 1}/{maxIndex + 1}
-            </span>
-
-            {/* Speed selector */}
-            <div className="flex items-center bg-white/[0.04] rounded-md p-0.5 border border-white/[0.03]">
-              {SPEEDS.map((s) => (
-                <button
-                  key={s.value}
-                  onClick={() => setSpeed(s.value)}
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${
-                    speed === s.value ? 'bg-amber-500/20 text-amber-400' : 'text-gray-600 hover:text-gray-400'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
           </div>
 
-          {/* Progress bar line */}
-          <div className="h-[2px] bg-white/[0.03] rounded-full mt-2 overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full"
-              style={{ width: `${progress}%` }}
-              transition={{ duration: 0.1 }}
-            />
+          <div className="flex items-center gap-3 text-[10px] text-gray-500">
+            <span className="tabular-nums">{playbackIndex} / {totalCandles}</span>
+            <span className="text-gray-600">|</span>
+            <span>{dateStr}</span>
           </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={cycleSpeed}
+            className="h-7 px-2 text-[10px] font-bold text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 border border-amber-500/20"
+          >
+            {speed}x
+          </Button>
         </div>
-      </motion.div>
-    </AnimatePresence>
+      </div>
+    </motion.div>
   );
 }

@@ -40,7 +40,7 @@ export const useMarketStore = create<MarketState>((set) => ({
   aiScore: null,
   isLoading: true,
 
-  setSymbol: (symbol) => set({ symbol, selectedCandleIndex: null, isLoading: true }),
+  setSymbol: (symbol) => set({ symbol, selectedCandleIndex: null }),
   setTimeframe: (timeframe) => set({ timeframe }),
   setDecompositionLevel: (decompositionLevel) => set({ decompositionLevel }),
   setCandles: (candles) => set({ candles, isLoading: false }),

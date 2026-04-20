@@ -14,9 +14,9 @@ export function generateHelixData(
   options: HelixOptions = {}
 ): HelixData {
   const {
-    heightPerCandle = 0.35,
-    radius = 1.8,
-    turnsPerCandle = 0.3,
+    heightPerCandle = 0.22,
+    radius = 2.2,
+    turnsPerCandle = 0.1,
   } = options;
 
   const info = ENERGY_SYMBOLS[symbol];
@@ -24,12 +24,12 @@ export function generateHelixData(
   const sellers: HelixPoint[] = [];
   const connections: [number, number][] = [];
 
-  // Normalize prices to a reasonable Y range
+  // Normalize prices to Z-axis range (depth)
   const prices = candles.map(c => c.close);
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const priceRange = maxPrice - minPrice || 1;
-  const targetYRange = candles.length * heightPerCandle * 0.6;
+  const targetZRange = 3; // Price creates depth variation
   
   // Normalize volume for scale
   const volumes = candles.map(c => c.volume);
@@ -37,16 +37,18 @@ export function generateHelixData(
   
   candles.forEach((candle, i) => {
     const angle = i * turnsPerCandle * Math.PI * 2;
-    const z = i * heightPerCandle;
-    const y = ((candle.close - minPrice) / priceRange) * targetYRange - targetYRange / 2;
-    const volumeScale = 0.03 + (candle.volume / maxVolume) * 0.12;
+    // Y-axis = time (helix extends upward)
+    const y = i * heightPerCandle;
+    // Z-axis = price (creates depth)
+    const z = ((candle.close - minPrice) / priceRange) * targetZRange - targetZRange / 2;
+    const volumeScale = 0.12 + (candle.volume / maxVolume) * 0.3;
     
-    // Buyer node (upper spiral)
+    // Buyer node (one spiral)
     buyers.push({
       position: [
-        Math.cos(angle) * radius,
-        y + 0.05,
-        z
+        Math.cos(angle) * radius,  // X = spiral radius
+        y,                          // Y = time (upward)
+        z + 0.15                    // Z = price (depth) + offset
       ],
       color: info.buyerColor,
       scale: volumeScale * (1 + (candle.buyVolume || candle.volume * 0.5) / candle.volume * 0.3),
@@ -54,12 +56,12 @@ export function generateHelixData(
       index: i,
     });
 
-    // Seller node (lower spiral, offset by π)
+    // Seller node (other spiral, offset by π)
     sellers.push({
       position: [
-        Math.cos(angle + Math.PI) * radius,
-        y - 0.05,
-        z
+        Math.cos(angle + Math.PI) * radius,  // X = opposite side
+        y,                                     // Y = same time
+        z - 0.15                               // Z = price - offset
       ],
       color: info.sellerColor,
       scale: volumeScale * (1 + (candle.sellVolume || candle.volume * 0.5) / candle.volume * 0.3),
@@ -79,27 +81,27 @@ export function generateSpiralCurve(
   options: HelixOptions = {}
 ): { buyerCurve: [number, number, number][]; sellerCurve: [number, number, number][] } {
   const {
-    heightPerCandle = 0.35,
-    radius = 1.8,
-    turnsPerCandle = 0.3,
+    heightPerCandle = 0.22,
+    radius = 2.2,
+    turnsPerCandle = 0.1,
   } = options;
 
   const prices = candles.map(c => c.close);
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const priceRange = maxPrice - minPrice || 1;
-  const targetYRange = candles.length * heightPerCandle * 0.6;
+  const targetZRange = 3;
 
   const buyerCurve: [number, number, number][] = [];
   const sellerCurve: [number, number, number][] = [];
 
   candles.forEach((candle, i) => {
     const angle = i * turnsPerCandle * Math.PI * 2;
-    const z = i * heightPerCandle;
-    const y = ((candle.close - minPrice) / priceRange) * targetYRange - targetYRange / 2;
+    const y = i * heightPerCandle;
+    const z = ((candle.close - minPrice) / priceRange) * targetZRange - targetZRange / 2;
 
-    buyerCurve.push([Math.cos(angle) * radius, y + 0.05, z]);
-    sellerCurve.push([Math.cos(angle + Math.PI) * radius, y - 0.05, z]);
+    buyerCurve.push([Math.cos(angle) * radius, y, z + 0.15]);
+    sellerCurve.push([Math.cos(angle + Math.PI) * radius, y, z - 0.15]);
   });
 
   return { buyerCurve, sellerCurve };

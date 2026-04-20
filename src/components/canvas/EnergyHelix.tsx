@@ -9,7 +9,9 @@ import { useUIStore } from '@/stores/uiStore';
 import { generateHelixData } from '@/lib/helixMath';
 import { ENERGY_SYMBOLS } from '@/types/energy';
 
-// Buyer nodes on the upper spiral
+const HEIGHT_PER_CANDLE = 0.22;
+
+// Buyer nodes on one spiral
 function BuyerNodes() {
   const candles = useMarketStore((s) => s.candles);
   const symbol = useMarketStore((s) => s.symbol);
@@ -24,18 +26,18 @@ function BuyerNodes() {
 
   return (
     <Instances limit={500}>
-      <sphereGeometry args={[1, 12, 12]} />
+      <sphereGeometry args={[1, 16, 16]} />
       <meshStandardMaterial
         color={info.buyerColor}
         metalness={0.9}
         roughness={0.1}
         emissive={info.buyerColor}
-        emissiveIntensity={0.15}
+        emissiveIntensity={0.3}
       />
       {buyers.map((point, i) => {
         const isSelected = selectedIndex === i;
         const isHovered = hoveredIndex === i;
-        const scaleMultiplier = isSelected ? 1.5 : isHovered ? 1.3 : 1.0;
+        const scaleMultiplier = isSelected ? 2.0 : isHovered ? 1.5 : 1.0;
 
         return (
           <Instance
@@ -53,7 +55,7 @@ function BuyerNodes() {
   );
 }
 
-// Seller nodes on the lower spiral
+// Seller nodes on the other spiral
 function SellerNodes() {
   const candles = useMarketStore((s) => s.candles);
   const symbol = useMarketStore((s) => s.symbol);
@@ -68,18 +70,18 @@ function SellerNodes() {
 
   return (
     <Instances limit={500}>
-      <sphereGeometry args={[1, 12, 12]} />
+      <sphereGeometry args={[1, 16, 16]} />
       <meshStandardMaterial
         color={info.sellerColor}
         metalness={0.85}
         roughness={0.15}
         emissive={info.sellerColor}
-        emissiveIntensity={0.1}
+        emissiveIntensity={0.2}
       />
       {sellers.map((point, i) => {
         const isSelected = selectedIndex === i;
         const isHovered = hoveredIndex === i;
-        const scaleMultiplier = isSelected ? 1.5 : isHovered ? 1.3 : 1.0;
+        const scaleMultiplier = isSelected ? 2.0 : isHovered ? 1.5 : 1.0;
 
         return (
           <Instance
@@ -97,67 +99,75 @@ function SellerNodes() {
   );
 }
 
-// Spiral curves rendered as small spheres along the path
-function SpiralPathNodes() {
+// Spiral backbone - tube-like rendering using small spheres
+function SpiralBackbone() {
   const candles = useMarketStore((s) => s.candles);
   const symbol = useMarketStore((s) => s.symbol);
   const info = ENERGY_SYMBOLS[symbol];
 
-  const { buyers, sellers } = useMemo(() => generateHelixData(candles, symbol), [candles, symbol]);
+  const backbonePoints = useMemo(() => {
+    if (candles.length < 2) return { buyers: [] as { position: [number, number, number]; color: string; scale: number }[], sellers: [] as { position: [number, number, number]; color: string; scale: number }[] };
 
-  // Create intermediate points between candle nodes for a smoother curve effect
-  const curvePoints = useMemo(() => {
-    if (buyers.length === 0 || sellers.length === 0) return [];
-    
-    const points: { position: [number, number, number]; color: string; scale: number }[] = [];andles);
-  const symbol = useMarketStore((s) => s.symbol);
-  const info = ENERGY_SYMBOLS[symbol];
+    const prices = candles.map(c => c.close);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice || 1;
+    const targetZRange = 3;
+    const radius = 2.2;
+    const turnsPerCandle = 0.1;
+    const heightPerCandle = 0.22;
 
-  const { buyers, sellers } = useMemo(() => generateHelixData(candles, symbol), [candles, symbol]);
+    const buyerPoints: { position: [number, number, number]; color: string; scale: number }[] = [];
+    const sellerPoints: { position: [number, number, number]; color: string; scale: number }[] = [];
 
-  if (buyers.length === 0) return null;
+    const substeps = 3;
+    for (let i = 0; i < candles.length; i++) {
+      for (let s = 0; s < substeps; s++) {
+        const t = i + s / substeps;
+        const angle = t * turnsPerCandle * Math.PI * 2;
+        const y = t * heightPerCandle;
+        const z = ((candles[i].close - minPrice) / priceRange) * targetZRange - targetZRange / 2;
 
-  // Create intermediate points between candle nodes for a smoother curve effect
-  // We use smaller, dimmer spheres along the path
-  const curvePoints = useMemo(() => {
-    const points: { position: [number, number, number]; color: string; scale: number }[] = [];
-    
-    for (let i = 0; i < buyers.length - 1; i++) {
-      const b1 = buyers[i].position;
-      const b2 = buyers[i + 1].position;
-      // Mid-point
-      points.push({
-        position: [(b1[0] + b2[0]) / 2, (b1[1] + b2[1]) / 2, (b1[2] + b2[2]) / 2],
-        color: info.buyerColor,
-        scale: 0.008,
-      });
+        buyerPoints.push({
+          position: [Math.cos(angle) * radius, y, z + 0.15],
+          color: info.buyerColor,
+          scale: 0.06,
+        });
+        sellerPoints.push({
+          position: [Math.cos(angle + Math.PI) * radius, y, z - 0.15],
+          color: info.sellerColor,
+          scale: 0.06,
+        });
+      }
     }
-    
-    for (let i = 0; i < sellers.length - 1; i++) {
-      const s1 = sellers[i].position;
-      const s2 = sellers[i + 1].position;
-      points.push({
-        position: [(s1[0] + s2[0]) / 2, (s1[1] + s2[1]) / 2, (s1[2] + s2[2]) / 2],
-        color: info.sellerColor,
-        scale: 0.008,
-      });
-    }
-    
-    return points;
-  }, [buyers, sellers, info]);
+
+    return { buyers: buyerPoints, sellers: sellerPoints };
+  }, [candles, symbol, info]);
+
+  if (backbonePoints.buyers.length === 0) return null;
 
   return (
-    <Instances limit={1000}>
-      <sphereGeometry args={[1, 6, 6]} />
-      <meshBasicMaterial transparent opacity={0.4} />
-      {curvePoints.map((point, i) => (
-        <Instance key={`cp-${i}`} position={point.position} scale={point.scale} color={point.color} />
-      ))}
-    </Instances>
+    <group>
+      <Instances limit={2000}>
+        <sphereGeometry args={[1, 6, 6]} />
+        <meshBasicMaterial transparent opacity={0.7} />
+        {backbonePoints.buyers.map((point, i) => (
+          <Instance key={`bb-${i}`} position={point.position} scale={point.scale} color={point.color} />
+        ))}
+      </Instances>
+      
+      <Instances limit={2000}>
+        <sphereGeometry args={[1, 6, 6]} />
+        <meshBasicMaterial transparent opacity={0.7} />
+        {backbonePoints.sellers.map((point, i) => (
+          <Instance key={`sb-${i}`} position={point.position} scale={point.scale} color={point.color} />
+        ))}
+      </Instances>
+    </group>
   );
 }
 
-// Connection bars between buyer and seller spirals
+// DNA ladder rungs connecting buyer and seller strands
 function ConnectionBars() {
   const candles = useMarketStore((s) => s.candles);
   const symbol = useMarketStore((s) => s.symbol);
@@ -165,7 +175,7 @@ function ConnectionBars() {
   const connectionData = useMemo(() => {
     const { buyers, sellers, connections } = generateHelixData(candles, symbol);
     if (connections.length === 0) return [];
-    const step = Math.max(1, Math.floor(connections.length / 40));
+    const step = Math.max(1, Math.floor(connections.length / 15));
     return connections
       .filter((_, i) => i % step === 0)
       .map(([bi, si], idx) => {
@@ -175,7 +185,7 @@ function ConnectionBars() {
         const mid = start.clone().add(end).multiplyScalar(0.5);
         const direction = end.clone().sub(start);
         const length = direction.length();
-        return { position: mid.toArray() as [number, number, number], scale: [0.004, Math.max(0.01, length), 0.004] as [number, number, number], key: idx };
+        return { position: mid.toArray() as [number, number, number], scale: [0.025, Math.max(0.01, length), 0.025] as [number, number, number], key: idx };
       })
       .filter(Boolean);
   }, [candles, symbol]);
@@ -183,9 +193,9 @@ function ConnectionBars() {
   if (connectionData.length === 0) return null;
 
   return (
-    <Instances limit={60}>
-      <cylinderGeometry args={[1, 1, 1, 4]} />
-      <meshBasicMaterial color="#ffffff" transparent opacity={0.08} />
+    <Instances limit={25}>
+      <cylinderGeometry args={[1, 1, 1, 6]} />
+      <meshStandardMaterial color="#ffffff" transparent opacity={0.35} emissive="#ffffff" emissiveIntensity={0.1} />
       {connectionData.map((conn) => (
         <Instance key={conn!.key} position={conn!.position} scale={conn!.scale} />
       ))}
@@ -193,7 +203,7 @@ function ConnectionBars() {
   );
 }
 
-// Price level indicators
+// Price level indicators (now horizontal lines at different Z positions)
 function PriceLevelIndicators() {
   const candles = useMarketStore((s) => s.candles);
   const symbol = useMarketStore((s) => s.symbol);
@@ -204,14 +214,13 @@ function PriceLevelIndicators() {
     const minPrice = Math.min(...closes);
     const maxPrice = Math.max(...closes);
     const priceRange = maxPrice - minPrice || 1;
-    const targetYRange = candles.length * 0.35 * 0.6;
     const numLevels = 5;
-    const result: { y: number; label: string }[] = [];
+    const result: { z: number; label: string }[] = [];
     const decimals = symbol === 'CL' ? 2 : 4;
     for (let i = 0; i <= numLevels; i++) {
       const frac = i / numLevels;
       result.push({
-        y: frac * targetYRange - targetYRange / 2,
+        z: frac * 3 - 1.5, // targetZRange = 3
         label: (minPrice + frac * priceRange).toFixed(decimals),
       });
     }
@@ -219,18 +228,18 @@ function PriceLevelIndicators() {
   }, [candles, symbol]);
 
   if (levels.length === 0) return null;
-  const zEnd = candles.length * 0.35;
+  const yEnd = candles.length * HEIGHT_PER_CANDLE;
 
   return (
     <group>
       {levels.map((level, i) => (
         <group key={`pl-${i}`}>
-          <mesh position={[-3, level.y, zEnd / 2]}>
-            <boxGeometry args={[0.02, 0.005, zEnd]} />
+          <mesh position={[-3.5, yEnd / 2, level.z]}>
+            <boxGeometry args={[0.02, yEnd, 0.005]} />
             <meshBasicMaterial color="#ffffff" transparent opacity={0.04} />
           </mesh>
-          <Html position={[-3.5, level.y, zEnd / 2]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
-            <div className="text-[9px] font-mono text-gray-600 whitespace-nowrap select-none">{level.label}</div>
+          <Html position={[-4.2, yEnd / 2, level.z]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
+            <div className="text-[9px] font-mono text-gray-500 whitespace-nowrap select-none">{level.label}</div>
           </Html>
         </group>
       ))}
@@ -253,12 +262,11 @@ function FibonacciLevels() {
     const closes = candles.map(c => c.close);
     const allMin = Math.min(...closes);
     const allRange = Math.max(...closes) - allMin || 1;
-    const targetYRange = candles.length * 0.35 * 0.6;
-    const yForPrice = (price: number) => ((price - allMin) / allRange) * targetYRange - targetYRange / 2;
+    const yForPrice = (price: number) => ((price - allMin) / allRange) * 3 - 1.5;
     const ratios = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
     const labels = ['0%', '23.6%', '38.2%', '50%', '61.8%', '78.6%', '100%'];
     return ratios.map((ratio, i) => ({
-      y: yForPrice(low + range * ratio),
+      z: yForPrice(low + range * ratio),
       label: labels[i],
       color: ratio === 0.618 || ratio === 0.382 ? '#9370DB' : '#6B21A8',
       opacity: ratio === 0.618 || ratio === 0.382 ? 0.25 : 0.1,
@@ -266,17 +274,17 @@ function FibonacciLevels() {
   }, [candles, symbol, showFibonacci]);
 
   if (fibLevels.length === 0) return null;
-  const zEnd = candles.length * 0.35;
+  const yEnd = candles.length * HEIGHT_PER_CANDLE;
 
   return (
     <group>
       {fibLevels.map((level, i) => (
         <group key={`fib-${i}`}>
-          <mesh position={[-2.5, level.y, zEnd / 2]}>
-            <boxGeometry args={[0.01, 0.003, zEnd]} />
+          <mesh position={[-2.8, yEnd / 2, level.z]}>
+            <boxGeometry args={[0.01, yEnd, 0.003]} />
             <meshBasicMaterial color={level.color} transparent opacity={level.opacity} />
           </mesh>
-          <Html position={[-2.8, level.y, zEnd / 2]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
+          <Html position={[-3.2, yEnd / 2, level.z]} center distanceFactor={10} style={{ pointerEvents: 'none' }}>
             <div className="text-[8px] font-mono text-purple-400/50 whitespace-nowrap select-none">{level.label}</div>
           </Html>
         </group>
@@ -306,8 +314,8 @@ function SelectedCandleLabel() {
   const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
-    <Html position={[point.position[0] + 0.5, point.position[1] + 0.3, point.position[2]]} center distanceFactor={8}>
-      <div className="bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-lg px-3 py-2.5 text-white min-w-[180px] shadow-2xl">
+    <Html position={[point.position[0] + 1, point.position[1] + 0.3, point.position[2]]} center distanceFactor={8}>
+      <div className="bg-gray-900/95 backdrop-blur-md border border-amber-500/30 rounded-lg px-3 py-2.5 text-white min-w-[180px] shadow-2xl shadow-amber-500/10">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-amber-400">{info.symbol}</span>
@@ -343,7 +351,7 @@ export function EnergyHelix() {
 
   useFrame((_, delta) => {
     if (groupRef.current && autoRotate) {
-      groupRef.current.rotation.y += delta * 0.05;
+      groupRef.current.rotation.y += delta * 0.08;
     }
   });
 
@@ -351,7 +359,7 @@ export function EnergyHelix() {
     <group ref={groupRef}>
       {showBuyers && <BuyerNodes />}
       {showSellers && <SellerNodes />}
-      <SpiralPathNodes />
+      <SpiralBackbone />
       {showConnections && <ConnectionBars />}
       <PriceLevelIndicators />
       <FibonacciLevels />

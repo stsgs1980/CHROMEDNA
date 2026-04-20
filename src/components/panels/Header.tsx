@@ -58,14 +58,14 @@ function EIACountdown() {
   }, []);
 
   return (
-    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-bold transition-all ${
+    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-bold transition-all duration-300 ${
       isUrgent
-        ? 'border-amber-500/40 bg-amber-500/15 text-amber-400 animate-amber-pulse'
-        : 'border-white/[0.06] bg-white/[0.03] text-gray-400'
+        ? 'border-amber-500/40 bg-amber-500/15 text-amber-400 animate-amber-pulse shadow-sm shadow-amber-500/10'
+        : 'border-white/[0.06] bg-white/[0.03] text-gray-400 hover:border-white/[0.1]'
     }`}>
-      <Clock className="w-3 h-3" />
+      <Clock className={`w-3 h-3 transition-transform duration-300 ${isUrgent ? 'animate-glow-breathe' : ''}`} />
       <span className="hidden lg:inline">EIA</span>
-      <span className="tabular-nums">{countdown}</span>
+      <span className="tabular-nums number-transition">{countdown}</span>
     </div>
   );
 }
@@ -160,17 +160,18 @@ export function Header() {
     <motion.header
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-gray-950/85 backdrop-blur-xl border-b border-white/[0.06]"
+      className="fixed top-0 left-0 right-0 z-50 glass-panel"
     >
       <div className="flex items-center justify-between h-14 px-3 lg:px-4 gap-2">
         {/* Logo & Symbol Name */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-            <Zap className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/25 active-glow-amber relative overflow-hidden">
+            <Zap className="w-4 h-4 text-white relative z-10" />
+            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
           </div>
           <div className="hidden sm:block">
             <span className="text-base font-bold text-white tracking-tight">
-              CHROME<span className="text-amber-400">DNA</span>
+              CHROME<span className="text-gradient-amber">DNA</span>
             </span>
             <span className="text-[10px] text-gray-500 block leading-tight -mt-0.5">Energy Edition</span>
           </div>
@@ -178,7 +179,7 @@ export function Header() {
 
         {/* Symbol Selector + Full Name */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-white/[0.04] rounded-lg p-0.5 border border-white/[0.04]">
+          <div className="flex items-center gap-1 bg-white/[0.04] rounded-lg p-0.5 border border-white/[0.04] gradient-border-amber">
             {SYMBOLS.map((s) => {
               const sInfo = ENERGY_SYMBOLS[s];
               const isActive = symbol === s;
@@ -188,8 +189,8 @@ export function Header() {
                   onClick={() => setSymbol(s)}
                   className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all duration-200 ${
                     isActive
-                      ? 'bg-amber-500/20 text-amber-400 shadow-sm shadow-amber-500/10 border border-amber-500/30'
-                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                      ? 'bg-amber-500/20 text-amber-400 shadow-sm shadow-amber-500/10 border border-amber-500/30 active-glow-amber'
+                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 hover:shadow-sm'
                   }`}
                 >
                   {s}
@@ -221,26 +222,27 @@ export function Header() {
           </div>
 
           {/* Session Range */}
-          <div className="hidden xl:flex flex-col items-end text-[9px] text-gray-500 tabular-nums border-l border-white/[0.06] pl-3">
-            <span>H: <span className="text-green-400/70">{sessionHigh.toFixed(decDigits)}</span></span>
-            <span>L: <span className="text-red-400/70">{sessionLow.toFixed(decDigits)}</span></span>
+          <div className="hidden xl:flex flex-col items-end text-[9px] text-gray-500 tabular-nums border-l border-white/[0.06] pl-3 relative">
+            <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-amber-500/20 to-transparent" />
+            <span>H: <span className="text-green-400/80 number-transition">{sessionHigh.toFixed(decDigits)}</span></span>
+            <span>L: <span className="text-red-400/80 number-transition">{sessionLow.toFixed(decDigits)}</span></span>
           </div>
         </div>
 
         {/* AI Score Badge */}
         {aiScore && (
-          <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border ${
+          <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-300 hover:scale-[1.02] ${
             aiScore.signal === 'BULLISH'
-              ? 'border-green-500/30 bg-green-500/10'
+              ? 'border-green-500/30 bg-green-500/10 active-glow-green'
               : aiScore.signal === 'BEARISH'
-              ? 'border-red-500/30 bg-red-500/10'
+              ? 'border-red-500/30 bg-red-500/10 active-glow-red'
               : 'border-gray-500/30 bg-gray-500/10'
           }`}>
             <div className={`w-1.5 h-1.5 rounded-full ${
-              aiScore.signal === 'BULLISH' ? 'bg-green-400 animate-pulse' :
-              aiScore.signal === 'BEARISH' ? 'bg-red-400 animate-pulse' : 'bg-gray-400'
+              aiScore.signal === 'BULLISH' ? 'bg-green-400 animate-pulse glow-dot-green' :
+              aiScore.signal === 'BEARISH' ? 'bg-red-400 animate-pulse glow-dot-red' : 'bg-gray-400'
             }`} />
-            <span className={`text-xs font-bold ${
+            <span className={`text-xs font-bold number-transition ${
               aiScore.signal === 'BULLISH' ? 'text-green-400' :
               aiScore.signal === 'BEARISH' ? 'text-red-400' : 'text-gray-400'
             }`}>
@@ -261,15 +263,15 @@ export function Header() {
         {/* Controls */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {/* Decomposition Level - compact on mobile */}
-          <div className="flex items-center gap-0.5 bg-white/[0.04] rounded-md p-0.5 border border-white/[0.03]">
+          <div className="flex items-center gap-0.5 bg-white/[0.04] rounded-md p-0.5 border border-white/[0.03] gradient-border-amber">
             {DECOMPOSITION_LEVELS.map((level) => (
               <button
                 key={level.level}
                 onClick={() => setDecompositionLevel(level.level)}
-                className={`h-6 px-1.5 rounded text-[10px] font-bold transition-all duration-150 ${
+                className={`h-6 px-1.5 rounded text-[10px] font-bold transition-all duration-200 ${
                   decompositionLevel === level.level
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-400'
+                    ? 'bg-amber-500/15 text-amber-300 shadow-sm shadow-amber-500/5 active-glow-amber'
+                    : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'
                 }`}
               >
                 {level.level}
@@ -280,10 +282,10 @@ export function Header() {
           {/* Live Toggle */}
           <button
             onClick={() => setLive(!isLive)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all duration-200 ${
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all duration-300 hover:scale-[1.02] ${
               isLive
-                ? 'bg-green-600/20 text-green-400 border border-green-500/30 shadow-sm shadow-green-500/10'
-                : 'bg-white/[0.04] text-gray-500 border border-white/[0.04] hover:text-gray-300'
+                ? 'bg-green-600/20 text-green-400 border border-green-500/30 shadow-sm shadow-green-500/10 active-glow-green'
+                : 'bg-white/[0.04] text-gray-500 border border-white/[0.04] hover:text-gray-300 hover:border-white/[0.08]'
             }`}
           >
             {isLive ? (
@@ -296,8 +298,10 @@ export function Header() {
         </div>
       </div>
 
-      {/* Thin accent line at bottom of header */}
-      <div className="h-[1px] bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+      {/* Gradient accent line at bottom of header */}
+      <div className="h-[1px] bg-gradient-to-r from-transparent via-amber-500/40 to-transparent relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-400/20 to-transparent" />
+      </div>
     </motion.header>
   );
 }
