@@ -3,6 +3,7 @@
 import { useMemo, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus, BarChart3, Brain, Droplets, Thermometer, Activity, Target, Gauge, ArrowUpRight, ArrowDownRight, Zap, Scale, Grid3x3, Waves, Sigma, BarChart2 } from 'lucide-react';
+import { Watchlist } from '@/components/panels/Watchlist';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -1142,6 +1143,11 @@ export function RightPanel() {
 
               {/* Market Regime Indicator */}
               <MarketRegimeIndicator />
+
+              <div className="section-divider-enhanced" />
+
+              {/* Watchlist */}
+              <Watchlist />
 
               {/* Bottom padding */}
               <div className="h-4" />

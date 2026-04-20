@@ -1205,3 +1205,83 @@ body {
 .trade-flash-red {
   animation: trade-flash-red 0.6s ease-out;
 }
+
+/* ─── CHROME DNA Task 13-b: Panel Micro-Animations & Visual Depth ─── */
+
+/* Panel slide-in glow pulse - when panels appear */
+.panel-appear-glow {
+  animation: panel-appear-glow 0.6s ease-out;
+}
+
+@keyframes panel-appear-glow {
+  0% { box-shadow: 0 0 0 rgba(245, 158, 11, 0); }
+  50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.08); }
+  100% { box-shadow: 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+/* Data value change flash - briefly highlight on change */
+.value-change-flash {
+  animation: value-change 0.5s ease-out;
+}
+
+@keyframes value-change {
+  0% { text-shadow: 0 0 8px currentColor; }
+  100% { text-shadow: none; }
+}
+
+/* Card hover lift with shadow expansion */
+.card-hover-lift {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 12px rgba(245,158,11,0.06);
+  border-color: rgba(245, 158, 11, 0.12);
+}
+
+/* Pulse ring animation for live indicators */
+.pulse-ring {
+  position: relative;
+}
+
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: pulse-ring-expand 2s ease-out infinite;
+}
+
+@keyframes pulse-ring-expand {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Gradient text shimmer for important values */
+.text-shimmer {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Scrollable panel inner shadow - adds depth to scrollable content */
+.scroll-inner-shadow {
+  mask-image: linear-gradient(to bottom, transparent 0%, black 3%, black 97%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 3%, black 97%, transparent 100%);
+}
+
+/* Screenshot flash overlay */
+@keyframes screenshot-flash {
+  0% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+.screenshot-flash {
+  animation: screenshot-flash 0.4s ease-out forwards;
+}

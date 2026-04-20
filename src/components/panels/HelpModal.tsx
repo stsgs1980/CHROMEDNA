@@ -11,6 +11,7 @@ interface ShortcutEntry {
 
 const SHORTCUTS: ShortcutEntry[] = [
   { keys: '1-4', description: 'Switch Symbol (CL / NG / RB / HO)' },
+  { keys: 'S', description: 'Screenshot Export' },
   { keys: 'E', description: 'Toggle EIA Report' },
   { keys: 'P', description: 'Toggle Playback Mode' },
   { keys: 'R', description: 'Toggle Auto Rotate' },

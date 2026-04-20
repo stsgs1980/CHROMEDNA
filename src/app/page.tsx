@@ -12,6 +12,7 @@ import { BottomPanel } from '@/components/panels/BottomPanel';
 import { PlaybackBar } from '@/components/panels/PlaybackBar';
 import { EIAReportOverlay } from '@/components/panels/EIAReportOverlay';
 import { HelpModal } from '@/components/panels/HelpModal';
+import { ScreenshotExport } from '@/components/panels/ScreenshotExport';
 import { LiveTickSimulator } from '@/components/canvas/LiveTickSimulator';
 import { generateEnergyData, generateVolumeProfile, generateOrderFlow } from '@/lib/energyGenerators';
 import { calculateCompositeScore } from '@/lib/aiScoring';
@@ -97,6 +98,12 @@ function KeyboardShortcuts() {
         case 'p': togglePlaybackBar(); break;
         case 'r': setAutoRotate(!autoRotate); break;
         case 'l': setLive(!isLive); break;
+        case 's':
+          if (!e.metaKey && !e.ctrlKey) {
+            // Dispatch custom event for ScreenshotExport to handle
+            window.dispatchEvent(new CustomEvent('chrome-dna-screenshot'));
+          }
+          break;
         case '?': toggleHelp(); break;
       }
     };
@@ -339,10 +346,11 @@ export default function Home() {
           </div>
         )}
 
-        {/* Keyboard shortcut hint */}
-        <div className="pointer-events-auto fixed top-14 right-3 z-[60]">
+        {/* Keyboard shortcut hint + Screenshot button */}
+        <div className="pointer-events-auto fixed top-14 right-3 z-[60] flex items-center gap-2">
+          <ScreenshotExport />
           <div className="text-[8px] text-gray-700/50 tracking-wider font-mono">
-            [1-4] Symbol · [E] EIA · [P] Play · [R] Rotate · [F] Fib · [?] Help
+            [1-4] Symbol · [S] Screenshot · [E] EIA · [P] Play · [R] Rotate · [F] Fib · [?] Help
           </div>
         </div>
       </div>

@@ -662,6 +662,85 @@ function WeatherParticles() {
   );
 }
 
+// 3D Volume Heatmap Layer - cylindrical ring segments showing volume intensity around the DNA helix
+function VolumeHeatmap() {
+  const showVolumeProfile = useUIStore((s) => s.showVolumeProfile);
+  const candles = useMarketStore((s) => s.candles);
+  const symbol = useMarketStore((s) => s.symbol);
+  const materialRefs = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
+
+  // Compute volume data for each candle - sample to limit instances for performance
+  const volumeData = useMemo(() => {
+    if (!showVolumeProfile || candles.length === 0) return [];
+
+    const maxVolume = Math.max(...candles.map(c => c.volume));
+
+    // Sample every Nth candle to limit total rings (max ~60)
+    const step = Math.max(1, Math.floor(candles.length / 60));
+
+    const result: { y: number; normalizedVol: number; index: number }[] = [];
+    for (let i = 0; i < candles.length; i += step) {
+      const candle = candles[i];
+      const y = i * HEIGHT_PER_CANDLE;
+      const normalizedVol = candle.volume / maxVolume; // 0 to 1
+      result.push({ y, normalizedVol, index: i });
+    }
+    return result;
+  }, [candles, symbol, showVolumeProfile]);
+
+  // Animate: pulse each ring's opacity
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+    materialRefs.current.forEach((mat, i) => {
+      if (!mat || !volumeData[i]) return;
+      // Each ring pulses with a phase offset based on its position
+      const baseOpacity = 0.15 + volumeData[i].normalizedVol * 0.45;
+      const pulse = baseOpacity + Math.sin(time * 0.8 + i * 0.3) * (baseOpacity * 0.1);
+      mat.opacity = pulse;
+    });
+  });
+
+  if (!showVolumeProfile || volumeData.length === 0) return null;
+
+  const heatmapRadius = HELIX_RADIUS + 0.3;
+
+  return (
+    <group>
+      {volumeData.map((d, i) => {
+        // Color gradient: low volume = dim amber, high volume = bright amber/white
+        const volColor = d.normalizedVol > 0.8
+          ? '#fff7ed'  // near white for very high volume
+          : d.normalizedVol > 0.5
+            ? '#fbbf24' // bright amber for high volume
+            : '#92400e'; // dim amber for low volume
+
+        const emissiveIntensity = 0.2 + d.normalizedVol * 0.8;
+        const tubeRadius = 0.015 + d.normalizedVol * 0.04; // thicker for higher volume
+
+        return (
+          <mesh
+            key={`vh-${d.index}`}
+            position={[0, d.y, 0]}
+          >
+            <torusGeometry args={[heatmapRadius, tubeRadius, 6, 32]} />
+            <meshStandardMaterial
+              ref={(el) => { materialRefs.current[i] = el; }}
+              color={volColor}
+              emissive={volColor}
+              emissiveIntensity={emissiveIntensity}
+              transparent
+              opacity={0.15 + d.normalizedVol * 0.45}
+              metalness={0.5}
+              roughness={0.4}
+              depthWrite={false}
+            />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
 // Main helix component
 export function EnergyHelix() {
   const groupRef = useRef<THREE.Group>(null);
@@ -688,6 +767,7 @@ export function EnergyHelix() {
       <SelectedCandleLabel />
       <EIADayMarkers />
       <WeatherParticles />
+      <VolumeHeatmap />
     </group>
   );
 }

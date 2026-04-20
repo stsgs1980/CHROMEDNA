@@ -309,3 +309,131 @@ Priority Recommendations for Next Phase:
 4. Performance optimization: lazy-load heavy components, reduce re-renders
 5. Add more 3D visualization layers (supply chain overlay, geographic map)
 6. Add multi-timeframe comparison view
+
+---
+Task ID: 13
+Agent: Main Orchestrator (Cron Review Round 2)
+Task: QA assessment, styling improvements, feature additions (Watchlist, Heatmap, Screenshot)
+
+Work Log:
+- Reviewed worklog.md - 12+ task entries with comprehensive project history
+- QA testing via agent-browser: App loads successfully, no JavaScript errors
+  - Only console warning: THREE.Clock deprecation (Three.js internals, not our code)
+  - Dev server responds with 200 via curl
+  - Production build succeeds with zero errors
+  - Lint passes with zero errors
+- No bugs or compilation errors found - project is in stable state
+- Dispatched 2 parallel subagents for improvements:
+  - Task 13-a: Watchlist panel + 3D Volume Heatmap layer
+  - Task 13-b: CSS micro-animations + Screenshot Export feature
+
+Styling Improvements (7 new CSS utilities):
+- `.panel-appear-glow` - Amber glow pulse when panels appear
+- `.value-change-flash` - Text-shadow highlight on numeric value changes
+- `.card-hover-lift` - Card lift with shadow expansion + amber border glow
+- `.pulse-ring` - Expanding ring animation for live indicators
+- `.text-shimmer` - Gradient text shimmer for important values
+- `.scroll-inner-shadow` - Scrollable content depth mask (fade edges)
+- `.screenshot-flash` - White overlay flash for screenshot feedback
+
+New Features:
+1. **Watchlist Panel** (Watchlist.tsx): Bloomberg-style 2×2 mini-card grid for all 4 symbols
+   - Price, change %, 20-point sparkline, volume bar per symbol
+   - Click to switch symbol, amber highlight for active symbol
+   - Framer-motion staggered entry animation
+   - Integrated into RightPanel after Market Regime Indicator
+
+2. **3D Volume Heatmap** (EnergyHelix.tsx): Cylindrical heatmap around DNA helix
+   - Torus rings at each candle position, color/opacity/thickness scaled by volume
+   - Dim amber → bright amber → near white color gradient
+   - Per-ring pulse animation with staggered phase (wave effect)
+   - Controlled by showVolumeProfile toggle
+
+3. **Screenshot Export** (ScreenshotExport.tsx): Capture WebGL canvas as PNG
+   - Camera icon button, downloads as CHROME-DNA-{symbol}-{timestamp}.png
+   - White flash feedback + "Saved!" confirmation
+   - Keyboard shortcut [S] with custom DOM event pattern
+   - Added to HelpModal shortcuts list
+
+Verification:
+- `bun run lint` passes with zero errors
+- `npx next build` compiles successfully
+- Dev server returns 200
+- Agent-browser screenshot shows app rendering correctly with 3D scene + UI panels
+- No JavaScript errors in browser console
+
+Current Project Status:
+- Full 3D DNA helix with TubeGeometry backbone + grid floor + selection rings + price planes + particle trails + volume heatmap
+- Comprehensive energy futures terminal with 15+ panels/overlays
+- Watchlist panel with 4-symbol mini-cards
+- Technical Indicators: RSI, MACD, Bollinger Bands, ATR
+- Trade Simulation with BUY/SELL, position tracking, P&L
+- Price Alert system with above/below triggers
+- Screenshot Export with keyboard shortcut [S]
+- BID/ASK spread display, Market session indicator, latency display
+- AI Composite Score, Market Regime detection, Correlation matrix
+- 1300+ lines of CSS with premium styling + micro-animations
+- Keyboard shortcuts (12+ with Help modal)
+
+Unresolved Issues:
+- Dev server unstable in sandbox under combined browser+server load (environment limitation)
+- Mock data only - real data integration needed for production
+- Mobile responsive view needs improvement
+
+Priority Recommendations for Next Phase:
+1. Integrate real market data API (CME Group, EIA API, WebSocket feeds)
+2. Mobile responsive 2D fallback view
+3. Performance optimization: lazy-load heavy components, reduce re-renders
+4. Add more 3D visualization layers (supply chain overlay, geographic map)
+5. Add multi-timeframe comparison view
+6. Add AI-powered pattern recognition overlay
+
+---
+Task ID: 13-b
+Agent: Styling & Screenshot Export Agent
+Task: Add styling polish (panel micro-animations, CSS transitions, visual depth) and Screenshot Export feature
+
+Work Log:
+- Read worklog.md to understand existing project state and prior work
+- Read globals.css (1207 lines), page.tsx (447 lines), HelpModal.tsx (113 lines), marketStore.ts, uiStore.ts
+- Implemented 2 enhancements across 4 files:
+
+1. **Panel Micro-Animations and Visual Depth** (globals.css - added ~80 lines):
+   - `.panel-appear-glow` - Subtle amber glow pulse when panels appear (0.6s ease-out, peaks at rgba(245,158,11,0.08))
+   - `.value-change-flash` - Text-shadow highlight on numeric value changes (0.5s, 8px currentColor glow fading to none)
+   - `.card-hover-lift` - Card lift on hover with shadow expansion (translateY(-2px), deep shadow + amber edge glow, border-color transition)
+   - `.pulse-ring` - Expanding ring animation for live indicators (scale 0.8→1.8, opacity fading, 2s infinite)
+   - `.text-shimmer` - Gradient text shimmer for important values (amber→gold→amber, 200% background-size, 3s infinite)
+   - `.scroll-inner-shadow` - Scrollable content depth mask (fade edges at 3%/97%)
+   - `.screenshot-flash` - White overlay flash animation for screenshot feedback (0.8→0 opacity, 0.4s)
+
+2. **Screenshot Export Feature** (new ScreenshotExport.tsx + page.tsx + HelpModal.tsx):
+   - Created `src/components/panels/ScreenshotExport.tsx` component:
+     - Camera icon button with hover glow (amber accent)
+     - Finds WebGL canvas via `document.querySelector('canvas')`
+     - Captures via `canvas.toDataURL('image/png')`
+     - Downloads as `CHROME-DNA-{symbol}-{timestamp}.png`
+     - White flash overlay on capture (0.4s fade using `.screenshot-flash` CSS)
+     - Checkmark confirmation with "Saved!" text (1.5s display)
+     - Listens for custom `chrome-dna-screenshot` DOM event for keyboard trigger
+   - Modified `page.tsx`:
+     - Added ScreenshotExport import
+     - Added 's' keyboard shortcut (dispatches `chrome-dna-screenshot` custom event)
+     - Added ScreenshotExport button next to keyboard shortcut hint
+     - Updated shortcut hint text: added `[S] Screenshot`
+   - Modified `HelpModal.tsx`:
+     - Added `S` shortcut entry: "Screenshot Export"
+     - Positioned after 1-4 Symbol switch entry
+
+- Communication pattern: Keyboard shortcut dispatches custom DOM event (`chrome-dna-screenshot`), ScreenshotExport listens for it via `useEffect` - clean decoupled architecture
+- All changes use 'use client' directive
+- All follow existing code patterns (Zustand stores, custom events, existing CSS naming conventions)
+- Color palette strictly amber/gold/green/red (no indigo/blue)
+- Lint of modified files passes with zero errors (pre-existing EnergyHelix.tsx errors unrelated to this task)
+
+Stage Summary:
+- 7 new CSS animation/transition utilities for micro-animations and visual depth
+- Screenshot Export component with camera button, flash overlay, download functionality
+- Keyboard shortcut [S] for screenshot (custom event dispatch pattern)
+- Help Modal updated with Screenshot Export shortcut entry
+- Shortcut hint text updated to include [S] Screenshot
