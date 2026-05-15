@@ -1,44 +1,49 @@
+/**
+ * EnergyHelix Wrapper
+ * Connects independent EnergyHelix component to CHROMEDNA stores
+ */
+
 'use client';
 
-import { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { EnergyHelix as EnergyHelixPure } from './energy-helix-3d';
+import { useMarketStore } from '@/stores/marketStore';
 import { useUIStore } from '@/stores/uiStore';
-import { BuyerNodes, SellerNodes } from './helix/HelixNodes';
-import { SpiralBackbone, ConnectionBars } from './helix/HelixBackbone';
-import { PriceLevelIndicators, FibonacciLevels } from './helix/HelixIndicators';
-import { SelectionRing, SelectedCandleLabel } from './helix/HelixSelection';
-import { EIADayMarkers, WeatherParticles } from './helix/HelixMarkers';
-import { VolumeHeatmap, AmbientGlowRing, PulsingEnergyCore, ConnectingEnergyArcs } from './helix/HelixEffects';
 
 export function EnergyHelix() {
-  const groupRef = useRef<THREE.Group>(null);
+  // Market data from store
+  const candles = useMarketStore((s) => s.candles);
+  const symbol = useMarketStore((s) => s.symbol);
+  const selectedIndex = useMarketStore((s) => s.selectedCandleIndex);
+  const selectCandle = useMarketStore((s) => s.selectCandle);
+  
+  // UI options from store
   const autoRotate = useUIStore((s) => s.autoRotate);
   const showBuyers = useUIStore((s) => s.showBuyers);
   const showSellers = useUIStore((s) => s.showSellers);
   const showConnections = useUIStore((s) => s.showConnections);
-
-  useFrame((_, delta) => {
-    if (groupRef.current && autoRotate) {
-      groupRef.current.rotation.y += delta * 0.08;
-    }
-  });
+  const showFibonacci = useUIStore((s) => s.showFibonacci);
+  const showEIALayer = useUIStore((s) => s.showEIALayer);
+  const showWeatherLayer = useUIStore((s) => s.showWeatherLayer);
+  const showVolumeProfile = useUIStore((s) => s.showVolumeProfile);
 
   return (
-    <group ref={groupRef}>
-      {showBuyers && <BuyerNodes />}
-      {showSellers && <SellerNodes />}
-      <SpiralBackbone />
-      {showConnections && <ConnectionBars />}
-      <PriceLevelIndicators />
-      <FibonacciLevels />
-      <SelectionRing />
-      <SelectedCandleLabel />
-      <EIADayMarkers />
-      <WeatherParticles />
-      <VolumeHeatmap />
-      <AmbientGlowRing />
-      <PulsingEnergyCore />
-      <ConnectingEnergyArcs />
-    </group>
+    <EnergyHelixPure
+      candles={candles}
+      symbol={symbol}
+      selectedIndex={selectedIndex}
+      options={{
+        showBuyers,
+        showSellers,
+        showConnections,
+        showFibonacci,
+        showEIALayer,
+        showWeatherLayer,
+        showVolumeProfile,
+        autoRotate,
+      }}
+      callbacks={{
+        onCandleSelect: selectCandle,
+      }}
+    />
   );
 }

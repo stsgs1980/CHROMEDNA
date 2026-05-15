@@ -1,18 +1,25 @@
+/**
+ * EnergyHelix 3D - Indicators Components
+ * Price levels and Fibonacci
+ */
+
 'use client';
 
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { useMarketStore } from '@/stores/marketStore';
-import { useUIStore } from '@/stores/uiStore';
+import { HelixCandle, HelixSymbol } from './types';
+import { HELIX_CONSTANTS } from './lib/helixMath';
 
-const HEIGHT_PER_CANDLE = 0.22;
-const HELIX_RADIUS = 2.2;
+const { HEIGHT_PER_CANDLE, HELIX_RADIUS } = HELIX_CONSTANTS;
 
-export function PriceLevelIndicators() {
-  const candles = useMarketStore((s) => s.candles);
-  const symbol = useMarketStore((s) => s.symbol);
+export interface PriceLevelIndicatorsProps {
+  candles: HelixCandle[];
+  symbol: HelixSymbol;
+}
+
+export function PriceLevelIndicators({ candles, symbol }: PriceLevelIndicatorsProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
 
   const levels = useMemo(() => {
@@ -54,7 +61,7 @@ export function PriceLevelIndicators() {
       { z: zForPrice(highPrice), type: 'high' as const, color: '#32CD32', opacity: 0.06, emissiveIntensity: 0.2 },
       { z: zForPrice(lowPrice), type: 'low' as const, color: '#FF4500', opacity: 0.06, emissiveIntensity: 0.2 },
     ];
-  }, [candles, symbol]);
+  }, [candles]);
 
   useFrame((state) => {
     if (materialRef.current) {
@@ -94,10 +101,12 @@ export function PriceLevelIndicators() {
   );
 }
 
-export function FibonacciLevels() {
-  const showFibonacci = useUIStore((s) => s.showFibonacci);
-  const candles = useMarketStore((s) => s.candles);
+export interface FibonacciLevelsProps {
+  candles: HelixCandle[];
+  showFibonacci: boolean;
+}
 
+export function FibonacciLevels({ candles, showFibonacci }: FibonacciLevelsProps) {
   const fibLevels = useMemo(() => {
     if (!showFibonacci || candles.length < 10) return [];
     const recent = candles.slice(-50);

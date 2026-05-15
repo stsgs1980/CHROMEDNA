@@ -1,18 +1,23 @@
+/**
+ * EnergyHelix 3D - Backbone Components
+ * Spiral tubes and connection bars
+ */
+
 'use client';
 
 import { useMemo } from 'react';
 import { Instances, Instance } from '@react-three/drei';
 import * as THREE from 'three';
-import { useMarketStore } from '@/stores/marketStore';
-import { generateHelixData, generateSpiralCurve } from '@/lib/helixMath';
-import { ENERGY_SYMBOLS } from '@/types/energy';
+import { HelixCandle, HelixSymbol, HELIX_SYMBOLS } from './types';
+import { generateHelixData, generateSpiralCurve, HELIX_CONSTANTS } from './lib/helixMath';
 
-const HELIX_RADIUS = 2.2;
+export interface SpiralBackboneProps {
+  candles: HelixCandle[];
+  symbol: HelixSymbol;
+}
 
-export function SpiralBackbone() {
-  const candles = useMarketStore((s) => s.candles);
-  const symbol = useMarketStore((s) => s.symbol);
-  const info = ENERGY_SYMBOLS[symbol];
+export function SpiralBackbone({ candles, symbol }: SpiralBackboneProps) {
+  const info = HELIX_SYMBOLS[symbol];
 
   const { buyerCurve, sellerCurve } = useMemo(
     () => generateSpiralCurve(candles),
@@ -65,10 +70,12 @@ export function SpiralBackbone() {
   );
 }
 
-export function ConnectionBars() {
-  const candles = useMarketStore((s) => s.candles);
-  const symbol = useMarketStore((s) => s.symbol);
+export interface ConnectionBarsProps {
+  candles: HelixCandle[];
+  symbol: HelixSymbol;
+}
 
+export function ConnectionBars({ candles, symbol }: ConnectionBarsProps) {
   const connectionData = useMemo(() => {
     const { buyers, sellers, connections } = generateHelixData(candles, symbol);
     if (connections.length === 0) return [];

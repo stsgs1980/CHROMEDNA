@@ -1,18 +1,25 @@
+/**
+ * EnergyHelix 3D - Nodes Components
+ * Buyer and Seller node spheres
+ */
+
 'use client';
 
 import { useMemo, useState } from 'react';
 import { Instances, Instance } from '@react-three/drei';
-import { useMarketStore } from '@/stores/marketStore';
-import { generateHelixData } from '@/lib/helixMath';
-import { ENERGY_SYMBOLS } from '@/types/energy';
+import { HelixCandle, HelixSymbol, HELIX_SYMBOLS } from './types';
+import { generateHelixData } from './lib/helixMath';
 
-export function BuyerNodes() {
-  const candles = useMarketStore((s) => s.candles);
-  const symbol = useMarketStore((s) => s.symbol);
-  const selectedIndex = useMarketStore((s) => s.selectedCandleIndex);
-  const selectCandle = useMarketStore((s) => s.selectCandle);
+export interface BuyerNodesProps {
+  candles: HelixCandle[];
+  symbol: HelixSymbol;
+  selectedIndex: number | null;
+  onSelect: (index: number | null) => void;
+}
+
+export function BuyerNodes({ candles, symbol, selectedIndex, onSelect }: BuyerNodesProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const info = ENERGY_SYMBOLS[symbol];
+  const info = HELIX_SYMBOLS[symbol];
 
   const { buyers } = useMemo(() => generateHelixData(candles, symbol), [candles, symbol]);
 
@@ -39,7 +46,7 @@ export function BuyerNodes() {
             position={point.position}
             scale={point.scale * scaleMultiplier}
             color={isHovered || isSelected ? '#FFFFFF' : undefined}
-            onClick={(e) => { e.stopPropagation(); selectCandle(selectedIndex === i ? null : i); }}
+            onClick={(e) => { e.stopPropagation(); onSelect(selectedIndex === i ? null : i); }}
             onPointerOver={(e) => { e.stopPropagation(); setHoveredIndex(i); document.body.style.cursor = 'pointer'; }}
             onPointerOut={() => { setHoveredIndex(null); document.body.style.cursor = 'auto'; }}
           />
@@ -49,13 +56,16 @@ export function BuyerNodes() {
   );
 }
 
-export function SellerNodes() {
-  const candles = useMarketStore((s) => s.candles);
-  const symbol = useMarketStore((s) => s.symbol);
-  const selectedIndex = useMarketStore((s) => s.selectedCandleIndex);
-  const selectCandle = useMarketStore((s) => s.selectCandle);
+export interface SellerNodesProps {
+  candles: HelixCandle[];
+  symbol: HelixSymbol;
+  selectedIndex: number | null;
+  onSelect: (index: number | null) => void;
+}
+
+export function SellerNodes({ candles, symbol, selectedIndex, onSelect }: SellerNodesProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const info = ENERGY_SYMBOLS[symbol];
+  const info = HELIX_SYMBOLS[symbol];
 
   const { sellers } = useMemo(() => generateHelixData(candles, symbol), [candles, symbol]);
 
@@ -82,7 +92,7 @@ export function SellerNodes() {
             position={point.position}
             scale={point.scale * scaleMultiplier}
             color={isHovered || isSelected ? '#FFFFFF' : undefined}
-            onClick={(e) => { e.stopPropagation(); selectCandle(selectedIndex === i ? null : i); }}
+            onClick={(e) => { e.stopPropagation(); onSelect(selectedIndex === i ? null : i); }}
             onPointerOver={(e) => { e.stopPropagation(); setHoveredIndex(i); document.body.style.cursor = 'pointer'; }}
             onPointerOut={() => { setHoveredIndex(null); document.body.style.cursor = 'auto'; }}
           />

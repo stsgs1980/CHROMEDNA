@@ -1,17 +1,24 @@
+/**
+ * EnergyHelix 3D - Selection Components
+ * Selection ring and candle label
+ */
+
 'use client';
 
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { useMarketStore } from '@/stores/marketStore';
-import { generateHelixData } from '@/lib/helixMath';
-import { ENERGY_SYMBOLS } from '@/types/energy';
+import { HelixCandle, HelixSymbol, HELIX_SYMBOLS } from './types';
+import { generateHelixData } from './lib/helixMath';
 
-export function SelectionRing() {
-  const candles = useMarketStore((s) => s.candles);
-  const symbol = useMarketStore((s) => s.symbol);
-  const selectedIndex = useMarketStore((s) => s.selectedCandleIndex);
+export interface SelectionRingProps {
+  candles: HelixCandle[];
+  symbol: HelixSymbol;
+  selectedIndex: number | null;
+}
+
+export function SelectionRing({ candles, symbol, selectedIndex }: SelectionRingProps) {
   const helixData = useMemo(() => generateHelixData(candles, symbol), [candles, symbol]);
 
   const buyerRingRef = useRef<THREE.Mesh>(null);
@@ -84,11 +91,14 @@ export function SelectionRing() {
   );
 }
 
-export function SelectedCandleLabel() {
-  const candles = useMarketStore((s) => s.candles);
-  const symbol = useMarketStore((s) => s.symbol);
-  const selectedIndex = useMarketStore((s) => s.selectedCandleIndex);
-  const info = ENERGY_SYMBOLS[symbol];
+export interface SelectedCandleLabelProps {
+  candles: HelixCandle[];
+  symbol: HelixSymbol;
+  selectedIndex: number | null;
+}
+
+export function SelectedCandleLabel({ candles, symbol, selectedIndex }: SelectedCandleLabelProps) {
+  const info = HELIX_SYMBOLS[symbol];
   const helixData = useMemo(() => generateHelixData(candles, symbol), [candles, symbol]);
 
   if (selectedIndex === null || !candles[selectedIndex]) return null;

@@ -1,20 +1,25 @@
+/**
+ * EnergyHelix 3D - Markers Components
+ * EIA day markers and weather particles
+ */
+
 'use client';
 
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { useMarketStore } from '@/stores/marketStore';
-import { useUIStore } from '@/stores/uiStore';
+import { HelixCandle } from './types';
+import { HELIX_CONSTANTS } from './lib/helixMath';
 
-const HEIGHT_PER_CANDLE = 0.22;
-const TURNS_PER_CANDLE = 0.1;
-const HELIX_RADIUS = 2.2;
+const { HEIGHT_PER_CANDLE, TURNS_PER_CANDLE, HELIX_RADIUS } = HELIX_CONSTANTS;
 
-export function EIADayMarkers() {
-  const showEIALayer = useUIStore((s) => s.showEIALayer);
-  const candles = useMarketStore((s) => s.candles);
+export interface EIADayMarkersProps {
+  candles: HelixCandle[];
+  showEIALayer: boolean;
+}
 
+export function EIADayMarkers({ candles, showEIALayer }: EIADayMarkersProps) {
   const eiaCandles = useMemo(() => {
     if (!showEIALayer || candles.length === 0) return [];
     const prices = candles.map((c) => c.close);
@@ -63,9 +68,12 @@ export function EIADayMarkers() {
   );
 }
 
-export function WeatherParticles() {
-  const showWeatherLayer = useUIStore((s) => s.showWeatherLayer);
-  const candles = useMarketStore((s) => s.candles);
+export interface WeatherParticlesProps {
+  candles: HelixCandle[];
+  showWeatherLayer: boolean;
+}
+
+export function WeatherParticles({ candles, showWeatherLayer }: WeatherParticlesProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummyRef = useRef(new THREE.Object3D());
 

@@ -1,18 +1,24 @@
+/**
+ * EnergyHelix 3D - Effects Components
+ * Volume heatmap, ambient glow, energy core, connecting arcs
+ */
+
 'use client';
 
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useMarketStore } from '@/stores/marketStore';
-import { useUIStore } from '@/stores/uiStore';
-import { generateHelixData } from '@/lib/helixMath';
+import { HelixCandle, HelixSymbol } from './types';
+import { generateHelixData, HELIX_CONSTANTS } from './lib/helixMath';
 
-const HEIGHT_PER_CANDLE = 0.22;
-const HELIX_RADIUS = 2.2;
+const { HEIGHT_PER_CANDLE, HELIX_RADIUS } = HELIX_CONSTANTS;
 
-export function VolumeHeatmap() {
-  const showVolumeProfile = useUIStore((s) => s.showVolumeProfile);
-  const candles = useMarketStore((s) => s.candles);
+export interface VolumeHeatmapProps {
+  candles: HelixCandle[];
+  showVolumeProfile: boolean;
+}
+
+export function VolumeHeatmap({ candles, showVolumeProfile }: VolumeHeatmapProps) {
   const materialRefs = useRef<(THREE.MeshStandardMaterial | null)[]>([]);
 
   const volumeData = useMemo(() => {
@@ -73,8 +79,11 @@ export function VolumeHeatmap() {
   );
 }
 
-export function AmbientGlowRing() {
-  const candles = useMarketStore((s) => s.candles);
+export interface AmbientGlowRingProps {
+  candles: HelixCandle[];
+}
+
+export function AmbientGlowRing({ candles }: AmbientGlowRingProps) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -104,8 +113,11 @@ export function AmbientGlowRing() {
   );
 }
 
-export function PulsingEnergyCore() {
-  const candles = useMarketStore((s) => s.candles);
+export interface PulsingEnergyCoreProps {
+  candles: HelixCandle[];
+}
+
+export function PulsingEnergyCore({ candles }: PulsingEnergyCoreProps) {
   const coreRef = useRef<THREE.Mesh>(null);
   const innerGlowRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
@@ -162,10 +174,12 @@ export function PulsingEnergyCore() {
   );
 }
 
-export function ConnectingEnergyArcs() {
-  const candles = useMarketStore((s) => s.candles);
-  const symbol = useMarketStore((s) => s.symbol);
+export interface ConnectingEnergyArcsProps {
+  candles: HelixCandle[];
+  symbol: HelixSymbol;
+}
 
+export function ConnectingEnergyArcs({ candles, symbol }: ConnectingEnergyArcsProps) {
   const arcData = useMemo(() => {
     if (candles.length === 0) return [];
     const { buyers, sellers } = generateHelixData(candles, symbol);
