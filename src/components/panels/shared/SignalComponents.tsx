@@ -1,7 +1,12 @@
+/**
+ * SignalComponents - Trading signal UI components
+ */
+
 'use client';
 
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { MetricCard } from '@zai/ui-kit';
 import { SignalType } from '@/types/energy';
 
 export function SignalIcon({ signal }: { signal: SignalType }) {
@@ -24,12 +29,5 @@ export function SignalBadge({ signal }: { signal: SignalType }) {
   );
 }
 
-export function MetricCard({ label, value, color = 'text-white', subtext }: { label: string; value: string; color?: string; subtext?: string }) {
-  return (
-    <div className="metric-card-enhanced rounded-md px-2.5 py-1.5">
-      <div className="data-label">{label}</div>
-      <div className={`text-sm font-semibold tabular-nums ${color}`}>{value}</div>
-      {subtext && <div className="text-[9px] text-gray-600 tabular-nums">{subtext}</div>}
-    </div>
-  );
-}
+// Re-export MetricCard for convenience
+export { MetricCard };
