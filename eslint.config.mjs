@@ -6,8 +6,21 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Custom no-unicode-policy rule
+import noUnicodePolicy from "./eslint-rules/no-unicode-policy.js";
+
 const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
+  plugins: {
+    'no-unicode-policy': {
+      rules: {
+        'no-unicode': noUnicodePolicy
+      }
+    }
+  },
   rules: {
+    // No-Unicode Policy [C] Critical
+    "no-unicode-policy/no-unicode": "error",
+
     // TypeScript rules
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-unused-vars": "off",
@@ -15,7 +28,7 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "@typescript-eslint/ban-ts-comment": "off",
     "@typescript-eslint/prefer-as-const": "off",
     "@typescript-eslint/no-unused-disable-directive": "off",
-    
+
     // React rules
     "react-hooks/exhaustive-deps": "off",
     "react-hooks/purity": "off",
@@ -23,11 +36,11 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "react/display-name": "off",
     "react/prop-types": "off",
     "react-compiler/react-compiler": "off",
-    
+
     // Next.js rules
     "@next/next/no-img-element": "off",
     "@next/next/no-html-link-for-pages": "off",
-    
+
     // General JavaScript rules
     "prefer-const": "off",
     "no-unused-vars": "off",
